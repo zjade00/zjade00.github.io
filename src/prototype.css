@@ -564,3 +564,13 @@
     margin-bottom: 10px;
   }
 }
+
+/* Installed-phone mode: use the real handset as the frame. */
+@media (max-width: 600px) {
+  .phone-stage { display: block; padding: 0; }
+  .device-menu-bar, .phone-bezel, .device-camera { display: none !important; }
+  .phone-scale-box { width: 100% !important; height: 100% !important; }
+  .phone-device { position: relative !important; inset: 0 !important; width: 100% !important; height: 100% !important; transform: none !important; }
+  .device-screen { inset: 0 !important; width: 100% !important; height: 100% !important; border-radius: 0 !important; box-shadow: none !important; cursor: auto; }
+  .device-screen, .device-screen * { cursor: auto !important; }
+}
