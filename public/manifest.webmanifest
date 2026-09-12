@@ -1,0 +1,13 @@
+{
+  "name": "客户拼车管理",
+  "short_name": "客户管理",
+  "description": "车账号、客户、额度、成本和风险状态管理",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f7fb",
+  "theme_color": "#2458d3",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

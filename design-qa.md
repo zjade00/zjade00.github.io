@@ -1,5 +1,13 @@
 # Design QA
 
+## 2026-09-12 · Empty-data mobile install release
+
+- Removed all seeded cars and customers. A new browser profile now opens with empty car-account and customer lists.
+- Replaced fixed income and profit examples with live totals calculated from user-entered fees and quota percentages.
+- Added a web app manifest, home-screen icons, standalone display mode, and a service worker for iPhone and Android home-screen use.
+- Verified the production build and protected mobile runtime integrity check.
+- Verified at iPhone preview width that the empty car page renders its add action and that the customer page shows zero for all four headline values.
+
 - Source visual truth: `C:\Users\百万王叔\.codex\generated_images\01a093a0-ee2b-7041-8ea3-0881cfa6b4f6\exec-72dd4ab8-e743-4952-8f60-d7d40c95b8c4.png`, with the user's final instruction removing “未分配” from the drill-in summary.
 - Implementation: `http://localhost:4173/`, captured and inspected in the Codex in-app browser.
 - Reference pixels: 1680 × 941 presentation board; implementation target CSS viewport: 393 × 852 iPhone screen. Browser preview rendered scaled to 350.78 × 760.46 CSS px because of the surrounding device stage.

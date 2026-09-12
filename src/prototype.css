@@ -104,6 +104,10 @@
   flex-direction: column;
   gap: 5px;
 }
+.empty-state { margin: 34px 4px; padding: 30px 22px; text-align: center; border: 1px dashed #cfd8e6; border-radius: 14px; background: #fff; }
+.empty-state h2 { margin: 0 0 8px; font-size: 18px; }
+.empty-state p { margin: 0 0 18px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.sub-label { margin-top: 12px; }
 .car-row {
   height: 51px;
   border: 1px solid var(--line);

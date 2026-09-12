@@ -51,141 +51,8 @@ type Car = {
   quota: number;
   customers: number[];
 };
-const carNames = [
-  "星河主号",
-  "工作室 A",
-  "ChatGPT-03",
-  "小敏专用车",
-  "Plus 共享 05",
-  "创作组",
-  "论文组 A",
-  "备用主号",
-  "设计组",
-  "测试车",
-  "海外主号",
-  "图像组",
-  "写作组",
-  "翻译组",
-  "备用 02",
-  "团队账户",
-  "数据组",
-  "临时车",
-  "Plus 共享 19",
-  "备用 03",
-];
-const seedCars: Car[] = carNames.map((name, i) => ({
-  id: i + 1,
-  name,
-  state: (["red", "orange", "red", "green", "orange", "green"] as State[])[
-    i % 6
-  ],
-  quota: [70, 60, 80, 50, 60, 40][i % 6],
-  customers:
-    i === 0
-      ? [1, 2, 3, 4, 5, 6]
-      : i < 5
-        ? Array.from({ length: i === 4 ? 3 : 4 }, (_, j) => 7 + (i - 1) * 4 + j)
-        : [],
-}));
-const seedCustomers: Customer[] = [
-  {
-    id: 1,
-    name: "阿杰",
-    wechat: "ajie_08",
-    carId: 1,
-    risk: "confirmed",
-    fee: 120,
-    quota: 20,
-    tags: ["事儿多", "不好说话"],
-    usage: "很多",
-    note: "已确认用量超出很多。",
-    special: "晚上联系。",
-    joined: "2026-06-30",
-    expires: "2026-09-30",
-  },
-  {
-    id: 2,
-    name: "小李",
-    wechat: "xiaoli_09",
-    carId: 1,
-    risk: "watch",
-    fee: 150,
-    quota: 10,
-    tags: ["好说话", "事儿少"],
-    usage: "偏多",
-    reason: "用量情况有出入，有嫌疑",
-    note: "前后描述不一致。",
-    special: "工作日晚上方便联系。",
-    joined: "2026-05-30",
-    expires: "2026-09-30",
-  },
-  {
-    id: 3,
-    name: "小陈",
-    wechat: "chen_12",
-    carId: 1,
-    risk: "safe",
-    fee: 200,
-    quota: 20,
-    tags: ["沟通顺畅"],
-    usage: "一般",
-    joined: "2026-07-12",
-    expires: "2026-10-12",
-  },
-  {
-    id: 4,
-    name: "王姐",
-    wechat: "wangjie",
-    carId: 1,
-    risk: "unknown",
-    fee: 130,
-    quota: 10,
-    tags: ["配合度高"],
-    usage: "不清楚",
-    joined: "2026-08-01",
-    expires: "2026-10-01",
-  },
-  {
-    id: 5,
-    name: "小周",
-    wechat: "zhou_22",
-    carId: 1,
-    risk: "watch",
-    fee: 160,
-    quota: 10,
-    tags: ["事儿少"],
-    usage: "偏多",
-    reason: "账号额度消耗异常",
-    joined: "2026-04-18",
-    expires: "2026-10-18",
-  },
-  {
-    id: 6,
-    name: "林哥",
-    wechat: "lin88",
-    carId: 1,
-    risk: "safe",
-    fee: 180,
-    quota: 10,
-    tags: ["好说话"],
-    usage: "较少",
-    joined: "2026-02-05",
-    expires: "2026-10-05",
-  },
-  ...Array.from({ length: 16 }, (_, i): Customer => ({
-    id: i + 7,
-    name: `客户${i + 7}`,
-    wechat: `wx_${i + 7}`,
-    carId: Math.min(5, Math.floor(i / 4) + 2),
-    risk: i % 7 === 0 ? "watch" : "safe",
-    fee: 160,
-    quota: 10,
-    tags: ["沟通顺畅"],
-    usage: "一般",
-    joined: "2026-08-01",
-    expires: "2026-10-01",
-  })),
-];
+const seedCars: Car[] = [];
+const seedCustomers: Customer[] = [];
 const labels: Record<Risk, string> = {
   safe: "可信",
   unknown: "未判断",
@@ -213,8 +80,8 @@ function load<T>(k: string, v: T): T {
   }
 }
 export default function Prototype() {
-  const [cars, setCars] = useState<Car[]>(() => load("cm-cars", seedCars)),
-    [customers] = useState(seedCustomers),
+  const [cars, setCars] = useState<Car[]>(() => load("cm2-cars", seedCars)),
+    [customers, setCustomers] = useState<Customer[]>(() => load("cm2-customers", seedCustomers)),
     [tab, setTab] = useState<"cars" | "customers">("cars"),
     [selectedId, setSelectedId] = useState<number | null>(null),
     [page, setPage] = useState(1),
@@ -225,11 +92,60 @@ export default function Prototype() {
     [risk, setRisk] = useState<Risk | null>(null),
     [tagFilter, setTags] = useState<string[]>([]),
     [sort, setSort] = useState<"default" | "profit" | "priority">("priority");
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+    }
+  }, []);
   useEffect(
-    () => localStorage.setItem("cm-cars", JSON.stringify(cars)),
+    () => localStorage.setItem("cm2-cars", JSON.stringify(cars)),
     [cars],
   );
+  useEffect(
+    () => localStorage.setItem("cm2-customers", JSON.stringify(customers)),
+    [customers],
+  );
   const selected = cars.find((c) => c.id === selectedId);
+  const ask = (label: string, current = "") => window.prompt(label, current)?.trim();
+  const addCar = () => {
+    const name = ask("请输入车组名称");
+    if (!name) return;
+    const stateText = ask("账号状态：绿色 / 橙色 / 红色", "绿色");
+    const state: State = stateText === "红色" ? "red" : stateText === "橙色" ? "orange" : "green";
+    const id = Date.now();
+    setCars((items) => [...items, { id, name, state, quota: 0, customers: [] }]);
+  };
+  const addCustomer = () => {
+    if (!cars.length) return window.alert("请先新增一个车账号。 ");
+    const name = ask("客户姓名"); if (!name) return;
+    const wechat = ask("微信名或微信号", "") || "";
+    const carName = ask(`所属账号：${cars.map((c) => c.name).join("、")}`, cars[0].name);
+    const car = cars.find((c) => c.name === carName) || cars[0];
+    const fee = Number(ask("收费金额（元）", "0")) || 0;
+    const quota = Number(ask("购买额度百分比，例如 10", "10")) || 0;
+    const joined = ask("上车时间（YYYY-MM-DD）", new Date().toISOString().slice(0, 10)) || "";
+    const expires = ask("到期时间（YYYY-MM-DD）", "") || "";
+    const id = Date.now();
+    const item: Customer = { id, name, wechat, carId: car.id, risk: "unknown", fee, quota, tags: [], usage: "不清楚", joined, expires };
+    setCustomers((items) => [...items, item]);
+    setCars((items) => items.map((c) => c.id === car.id ? { ...c, quota: c.quota + quota, customers: [...c.customers, id] } : c));
+  };
+  const editCustomer = (c: Customer) => {
+    const name = ask("客户姓名", c.name); if (!name) return;
+    const fee = Number(ask("收费金额（元）", String(c.fee))) || 0;
+    const quota = Number(ask("购买额度百分比", String(c.quota))) || 0;
+    const status = ask("客户状态：可信 / 未判断 / 需留意 / 已确定", labels[c.risk]);
+    const risk: Risk = status === "可信" ? "safe" : status === "需留意" ? "watch" : status === "已确定" ? "confirmed" : "unknown";
+    const selectedTags = (ask(`客户标签，用逗号分隔：${preset.join("、")}`, c.tags.join(",")) || "").split(/[,，]/).map((t) => t.trim()).filter(Boolean);
+    const usage = ask("估算用量：不清楚 / 较少 / 一般 / 偏多 / 很多", c.usage) || c.usage;
+    const reason = risk === "watch" ? ask(`需留意原因：${reasons.join("、")}`, c.reason || reasons[0]) : "";
+    const note = ask("简短说明", c.note || "") || "";
+    const special = ask("特殊备注", c.special || "") || "";
+    const joined = ask("上车时间（YYYY-MM-DD）", c.joined) || c.joined;
+    const expires = ask("到期时间（YYYY-MM-DD）", c.expires) || c.expires;
+    setCustomers((items) => items.map((x) => x.id === c.id ? { ...x, name, fee, quota, risk, tags: selectedTags, usage, reason, note, special, joined, expires } : x));
+    setCars((items) => items.map((car) => car.id === c.carId ? { ...car, quota: Math.max(0, car.quota - c.quota + quota) } : car));
+  };
   const visible = useMemo(() => {
     let a = customers.filter((c) =>
       selectedId ? c.carId === selectedId : true,
@@ -307,7 +223,7 @@ export default function Prototype() {
             </div>
             <div className="customer-list">
               {visible.map((c) => (
-                <Card c={c} key={c.id} />
+                <Card c={c} key={c.id} onEdit={editCustomer} />
               ))}
             </div>
           </main>
@@ -321,6 +237,7 @@ export default function Prototype() {
               a.map((c) => (c.id === selected.id ? { ...c, name } : c)),
             )
           }
+          changeState={(state) => setCars((a) => a.map((c) => c.id === selected.id ? { ...c, state } : c))}
           risk={risk}
           setRisk={setRisk}
           tags={tagFilter}
@@ -341,7 +258,7 @@ export default function Prototype() {
                   <h1>车账号</h1>
                   <p>先看状态，再找客户</p>
                 </div>
-                <button className="primary square">
+                <button className="primary square" onClick={addCar} aria-label="新增车账号">
                   <PlusIcon />
                 </button>
               </header>
@@ -373,6 +290,9 @@ export default function Prototype() {
                 ))}
               </div>
               <div className="car-list">
+                {cars.length === 0 && (
+                  <div className="empty-state"><h2>还没有车账号</h2><p>点击右上角的＋，先添加你的第一个车组。</p><button className="primary" onClick={addCar}>新增车账号</button></div>
+                )}
                 {cars
                   .filter((c) => carFilter === "all" || c.state === carFilter)
                   .filter((c) => c.name.includes(query))
@@ -392,7 +312,7 @@ export default function Prototype() {
                     </button>
                   ))}
               </div>
-              <div className="pages">
+              {cars.length > 10 && <div className="pages">
                 <button onClick={() => setPage(1)}>‹</button>
                 <button
                   className={page === 1 ? "on" : ""}
@@ -407,8 +327,8 @@ export default function Prototype() {
                   2
                 </button>
                 <button onClick={() => setPage(2)}>›</button>
-                <span>共 20 个账号</span>
-              </div>
+                <span>共 {cars.length} 个账号</span>
+              </div>}
               <div className="legend">
                 <span>
                   <i className="dot green" />
@@ -429,14 +349,16 @@ export default function Prototype() {
               </div>
             </>
           ) : (
-            <CustomerHome
-              list={visible}
+              <CustomerHome
+                list={visible}
               query={query}
               setQuery={setQuery}
               search={() => setApplied(query)}
               open={() => setSheet(true)}
               setRisk={setRisk}
-              setSort={setSort}
+                setSort={setSort}
+                addCustomer={addCustomer}
+                editCustomer={editCustomer}
             />
           )}
         </main>
@@ -476,6 +398,8 @@ function CustomerHome({
   open,
   setRisk,
   setSort,
+  addCustomer,
+  editCustomer,
 }: {
   list: Customer[];
   query: string;
@@ -484,14 +408,18 @@ function CustomerHome({
   open: () => void;
   setRisk: (r: Risk | null) => void;
   setSort: (s: "default" | "profit" | "priority") => void;
+  addCustomer: () => void;
+  editCustomer: (c: Customer) => void;
 }) {
   let w = list.filter((c) => c.risk === "watch").length,
     r = list.filter((c) => c.risk === "confirmed").length;
+  const income = list.reduce((sum, c) => sum + c.fee, 0);
+  const profit = list.reduce((sum, c) => sum + c.fee - c.quota * 8, 0);
   return (
     <>
       <header className="page-head">
         <h1>客户</h1>
-        <button className="primary add">
+        <button className="primary add" onClick={addCustomer}>
           <PlusIcon /> 新增
         </button>
       </header>
@@ -502,11 +430,11 @@ function CustomerHome({
         </div>
         <div>
           <span>本月收入</span>
-          <b className="pos">¥3,450</b>
+          <b className="pos">¥{income}</b>
         </div>
         <div>
           <span>本月净利润</span>
-          <b className="pos">¥1,050</b>
+          <b className={profit < 0 ? "neg" : "pos"}>¥{profit}</b>
         </div>
         <div>
           <span>待核查客户数</span>
@@ -547,14 +475,17 @@ function CustomerHome({
         </button>
       </div>
       <div className="customer-list compact">
+        {list.length === 0 && (
+          <div className="empty-state"><h2>还没有客户</h2><p>新增客户后，收费、成本和利润会自动计算。</p><button className="primary" onClick={addCustomer}>新增客户</button></div>
+        )}
         {list.slice(0, 6).map((c) => (
-          <Card c={c} key={c.id} />
+          <Card c={c} key={c.id} onEdit={editCustomer} />
         ))}
       </div>
     </>
   );
 }
-function Card({ c }: { c: Customer }) {
+function Card({ c, onEdit }: { c: Customer; onEdit: (c: Customer) => void }) {
   let cost = c.quota * 8,
     p = c.fee - cost;
   return (
@@ -599,7 +530,7 @@ function Card({ c }: { c: Customer }) {
         <span>上车时间：{c.joined}</span>
         <span>到期时间：{c.expires}</span>
       </div>
-      <button className="edit">编辑</button>
+      <button className="edit" onClick={() => onEdit(c)}>编辑</button>
     </article>
   );
 }
@@ -620,6 +551,7 @@ function Sheet({
   close,
   car,
   rename,
+  changeState,
   risk,
   setRisk,
   tags,
@@ -631,6 +563,7 @@ function Sheet({
   close: () => void;
   car?: Car;
   rename?: (s: string) => void;
+  changeState?: (s: State) => void;
   risk: Risk | null;
   setRisk: (r: Risk | null) => void;
   tags: string[];
@@ -662,6 +595,12 @@ function Sheet({
               </button>
             </div>
             <small>可修改车组名称</small>
+            <label className="sub-label">账号额度状态</label>
+            <div className="choices three">
+              <button className={car.state === "green" ? "selected" : ""} onClick={() => changeState?.("green")}><i className="dot green" />正常</button>
+              <button className={car.state === "orange" ? "selected" : ""} onClick={() => changeState?.("orange")}><i className="dot orange" />有点快</button>
+              <button className={car.state === "red" ? "selected" : ""} onClick={() => changeState?.("red")}><i className="dot red" />非常快</button>
+            </div>
           </section>
         )}
         <section>
