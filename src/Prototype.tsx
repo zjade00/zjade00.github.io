@@ -43,6 +43,8 @@ type Customer = {
   special?: string;
   joined: string;
   expires: string;
+  lastLogin: string;
+  device: "Windows" | "Mac" | "Linux";
 };
 type Car = {
   id: number;
@@ -125,8 +127,11 @@ export default function Prototype() {
     const quota = Number(ask("购买额度百分比，例如 10", "10")) || 0;
     const joined = ask("上车时间（YYYY-MM-DD）", new Date().toISOString().slice(0, 10)) || "";
     const expires = ask("到期时间（YYYY-MM-DD）", "") || "";
+    const lastLogin = ask("最后登录时间（YYYY-MM-DD HH:mm）", "") || "";
+    const deviceText = ask("设备型号：Windows / Mac / Linux", "Windows");
+    const device: Customer["device"] = deviceText?.toLowerCase() === "mac" ? "Mac" : deviceText?.toLowerCase() === "linux" ? "Linux" : "Windows";
     const id = Date.now();
-    const item: Customer = { id, name, wechat, carId: car.id, risk: "unknown", fee, quota, tags: [], usage: "不清楚", joined, expires };
+    const item: Customer = { id, name, wechat, carId: car.id, risk: "unknown", fee, quota, tags: [], usage: "不清楚", joined, expires, lastLogin, device };
     setCustomers((items) => [...items, item]);
     setCars((items) => items.map((c) => c.id === car.id ? { ...c, quota: c.quota + quota, customers: [...c.customers, id] } : c));
   };
@@ -143,7 +148,10 @@ export default function Prototype() {
     const special = ask("特殊备注", c.special || "") || "";
     const joined = ask("上车时间（YYYY-MM-DD）", c.joined) || c.joined;
     const expires = ask("到期时间（YYYY-MM-DD）", c.expires) || c.expires;
-    setCustomers((items) => items.map((x) => x.id === c.id ? { ...x, name, fee, quota, risk, tags: selectedTags, usage, reason, note, special, joined, expires } : x));
+    const lastLogin = ask("最后登录时间（YYYY-MM-DD HH:mm）", c.lastLogin || "") || "";
+    const deviceText = ask("设备型号：Windows / Mac / Linux", c.device || "Windows");
+    const device: Customer["device"] = deviceText?.toLowerCase() === "mac" ? "Mac" : deviceText?.toLowerCase() === "linux" ? "Linux" : "Windows";
+    setCustomers((items) => items.map((x) => x.id === c.id ? { ...x, name, fee, quota, risk, tags: selectedTags, usage, reason, note, special, joined, expires, lastLogin, device } : x));
     setCars((items) => items.map((car) => car.id === c.carId ? { ...car, quota: Math.max(0, car.quota - c.quota + quota) } : car));
   };
   const visible = useMemo(() => {
@@ -529,6 +537,8 @@ function Card({ c, onEdit }: { c: Customer; onEdit: (c: Customer) => void }) {
       <div className="dates">
         <span>上车时间：{c.joined}</span>
         <span>到期时间：{c.expires}</span>
+        <span>最后登录时间：{c.lastLogin || "未填写"}</span>
+        <span>设备型号：{c.device || "Windows"}</span>
       </div>
       <button className="edit" onClick={() => onEdit(c)}>编辑</button>
     </article>
