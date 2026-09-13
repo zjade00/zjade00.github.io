@@ -112,7 +112,7 @@ export default function Prototype() {
     [priorityOpen, setPriorityOpen] = useState(false);
   useEffect(() => {
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+      navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" }).then((registration) => registration.update()).catch(() => undefined);
     }
   }, []);
   useEffect(
@@ -233,6 +233,7 @@ export default function Prototype() {
                 <div>
                   <h1>车账号</h1>
                   <p>先看状态，再找客户</p>
+                  <a className="version-link" href="/update.html?v=owner6-r2">六项统计版 · 检查更新</a>
                 </div>
                 <button className="primary square" onClick={addCar} aria-label="新增车账号">
                   <PlusIcon />
