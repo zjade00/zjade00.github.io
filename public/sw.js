@@ -1,4 +1,4 @@
-const CACHE = "customer-manager-v2";
+const CACHE = "customer-manager-v4-native-scroll";
 const APP_SHELL = ["/", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png"];
 
 self.addEventListener("install", (event) => {

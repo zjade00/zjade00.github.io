@@ -1,10 +1,6 @@
 // @ts-nocheck
 import { useEffect, useMemo, useState } from "react";
-import {
-  BottomSheet as MobileBottomSheet,
-  KeyboardInput,
-  MobileScroll,
-} from "./mobile";
+import * as Dialog from "@radix-ui/react-dialog";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -15,17 +11,24 @@ import {
 import "./prototype.css";
 type Risk = "safe" | "unknown" | "watch" | "confirmed";
 type State = "green" | "orange" | "red";
-function BottomSheet({ snap, ...props }: any) {
-  return (
-    <MobileBottomSheet
-      {...props}
-      snap={typeof snap === "number" ? snap : 0.9}
-    />
-  );
+function BottomSheet({ open, onOpenChange, title, children }: any) {
+  return <Dialog.Root open={open} onOpenChange={onOpenChange} modal={false}>
+    {open && <div className="native-sheet-backdrop" onClick={() => onOpenChange(false)} />}
+    <Dialog.Content className="native-sheet" aria-describedby={undefined}
+      onOpenAutoFocus={(event) => event.preventDefault()}
+      onCloseAutoFocus={(event) => event.preventDefault()}
+      onInteractOutside={(event) => event.preventDefault()}>
+      <div className="native-sheet-header"><Dialog.Title>{title}</Dialog.Title><Dialog.Close aria-label="关闭编辑">关闭</Dialog.Close></div>
+      <div className="native-sheet-body">{children}</div>
+    </Dialog.Content>
+  </Dialog.Root>;
+}
+function MobileScroll({ className, children }: any) {
+  return <div className={`native-page ${className || ""}`}>{children}</div>;
 }
 function MobileTextField({ onValueChange, ...props }: any) {
   return (
-    <KeyboardInput {...props} onChange={(e) => onValueChange(e.target.value)} />
+    <input {...props} onChange={(e) => onValueChange(e.target.value)} />
   );
 }
 type Customer = {
@@ -121,6 +124,23 @@ export default function Prototype() {
   };
   const addCustomer = () => cars.length && setCustomerForm({ open: true });
   const editCustomer = (c: Customer) => setCustomerForm({ open: true, customer: c });
+  const changeTab = (next: "cars" | "customers") => {
+    (document.activeElement as HTMLElement)?.blur?.();
+    setCarForm(false); setCustomerForm({ open: false }); setSheet(false); setPriorityOpen(false);
+    setSelectedId(null); setTab(next);
+  };
+  const navigation = <nav className="nav" aria-label="主要分类"><button className={tab === "cars" ? "on" : ""} onClick={() => changeTab("cars")}>▣<small>车账号</small></button><button className={tab === "customers" ? "on" : ""} onClick={() => changeTab("customers")}>♙<small>客户</small></button></nav>;
+  const saveCustomer = (item: Omit<Customer, "id">) => {
+    const old = customerForm.customer;
+    const id = old?.id ?? Date.now();
+    setCustomers((items) => old ? items.map((x) => x.id === id ? { ...x, ...item } : x) : [...items, { ...item, id }]);
+    setCars((items) => items.map((car) => ({ ...car,
+      quota: Math.max(0, car.quota - (old?.carId === car.id ? old.quota : 0) + (item.carId === car.id ? item.quota : 0)),
+      customers: [...car.customers.filter((x) => x !== id), ...(item.carId === car.id ? [id] : [])],
+    })));
+    setCustomerForm({ open: false });
+  };
+  const customerEditor = <CustomerFormSheet open={customerForm.open} close={() => setCustomerForm({ open: false })} customer={customerForm.customer} cars={cars} save={saveCustomer} />;
   const visible = useMemo(() => {
     let a = customers.filter((c) =>
       selectedId ? c.carId === selectedId : true,
@@ -205,6 +225,8 @@ export default function Prototype() {
         </MobileScroll>
         <CarEditSheet open={carForm} close={() => setCarForm(false)} car={selected} save={(values) => setCars((a) => a.map((c) => c.id === selected.id ? { ...c, ...values } : c))} />
         <PrioritySheet open={priorityOpen} close={() => setPriorityOpen(false)} setSort={setSort} />
+        {customerEditor}
+        {navigation}
       </>
     );
   return (
@@ -319,20 +341,7 @@ export default function Prototype() {
           )}
         </main>
       </MobileScroll>
-      <nav className="nav">
-        <button
-          className={tab === "cars" ? "on" : ""}
-          onClick={() => setTab("cars")}
-        >
-          ▣<small>车账号</small>
-        </button>
-        <button
-          className={tab === "customers" ? "on" : ""}
-          onClick={() => setTab("customers")}
-        >
-          ♙<small>客户</small>
-        </button>
-      </nav>
+      {navigation}
       <Sheet
         open={sheet}
         close={() => setSheet(false)}
@@ -343,18 +352,7 @@ export default function Prototype() {
         sort={sort}
         setSort={setSort}
       />
-      <CustomerFormSheet open={customerForm.open} close={() => setCustomerForm({ open: false })} customer={customerForm.customer} cars={cars} save={(item) => {
-        if (customerForm.customer) {
-          const old = customerForm.customer;
-          setCustomers((items) => items.map((x) => x.id === old.id ? { ...x, ...item } : x));
-          setCars((items) => items.map((c) => c.id === old.carId ? { ...c, quota: Math.max(0, c.quota - old.quota + item.quota) } : c));
-        } else {
-          const id = Date.now();
-          setCustomers((items) => [...items, { ...item, id }]);
-          setCars((items) => items.map((c) => c.id === item.carId ? { ...c, quota: c.quota + item.quota, customers: [...c.customers, id] } : c));
-        }
-        setCustomerForm({ open: false });
-      }} />
+      {customerEditor}
     </>
   );
 }

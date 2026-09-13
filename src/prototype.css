@@ -1,4 +1,6 @@
 :root {
+  --mobile-safe-area-height: env(safe-area-inset-bottom, 0px);
+  --app-nav-height: calc(58px + env(safe-area-inset-bottom, 0px));
   --blue: #0878f9;
   --ink: #101828;
   --muted: #667085;
@@ -583,7 +585,25 @@
 }
 
 /* Installed-phone mode: use the real handset as the frame. */
+.native-page { position: absolute; inset: 0 0 var(--app-nav-height); overflow-y: auto; overflow-x: hidden; touch-action: pan-y pinch-zoom; -webkit-overflow-scrolling: touch; }
+.native-page .screen { padding: 18px 14px 24px; }
+.native-sheet-backdrop { position: absolute; inset: 0 0 var(--app-nav-height); background: #0005; z-index: 20; }
+.native-sheet { position: absolute; inset: 12px 0 var(--app-nav-height); z-index: 21; display: flex; flex-direction: column; background: white; border-radius: 18px 18px 0 0; overflow: hidden; touch-action: pan-y pinch-zoom; }
+.native-sheet-header { display: flex; align-items: center; justify-content: space-between; padding: 16px; flex-shrink: 0; border-bottom: 1px solid var(--line); }
+.native-sheet-header h2 { font-size: 18px; margin: 0; }
+.native-sheet-header button { padding: 8px 12px; color: var(--blue); background: white; border: 0; }
+.native-sheet-body { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; touch-action: pan-y pinch-zoom; overscroll-behavior-y: contain; padding-top: 16px; }
+.native-sheet .sheet { padding: 0 16px 24px; }
+.native-sheet .actions { position: sticky; bottom: 0; padding: 12px 0; background: white; }
+.field input, .field select, .field textarea, .search input, .rename input { font-size: 16px; min-width: 0; }
+.form-grid > * { min-width: 0; }
+.car-name { max-width: 100%; overflow-wrap: anywhere; }
+.car-title { min-width: 0; overflow-wrap: anywhere; }
+.nav { height: var(--app-nav-height); padding-bottom: env(safe-area-inset-bottom, 0px); z-index: 25; }
 @media (max-width: 600px) {
+  .status-bar, .home-indicator-svg, .android-navigation-bar, .keyboard-dock, .mobile-cursor { display: none !important; }
+  .mobile-app-viewport { bottom: 0 !important; }
+  .phone-stage { height: 100dvh; }
   .phone-stage { display: block; padding: 0; }
   .device-menu-bar, .phone-bezel, .device-camera { display: none !important; }
   .phone-scale-box { width: 100% !important; height: 100% !important; }
