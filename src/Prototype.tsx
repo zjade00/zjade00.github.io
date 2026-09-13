@@ -112,7 +112,6 @@ export default function Prototype() {
     [category, setCategory] = useState<Category | null>(null),
     [today, setToday] = useState(() => new Date()),
     [selectedId, setSelectedId] = useState<number | null>(null),
-    [page, setPage] = useState(1),
     [carFilter, setCarFilter] = useState<"all" | State>("all"),
     [query, setQuery] = useState(""),
     [applied, setApplied] = useState(""),
@@ -190,7 +189,7 @@ export default function Prototype() {
     if (!selected) return;
     setCars((items) => archiveCarRecords(items, customers, selected.id));
     setCarForm(false); setPriorityOpen(false); setCustomerForm({ open: false });
-    setSelectedId(null); setTab("cars"); setPage(1);
+    setSelectedId(null); setTab("cars");
   };
   const customerEditor = <CustomerFormSheet open={customerForm.open} close={() => setCustomerForm({ open: false })} customer={customerForm.customer} cars={activeCars} save={saveCustomer} remove={removeCustomer} />;
   const visible = useMemo(() => {
@@ -273,7 +272,7 @@ export default function Prototype() {
                 <div>
                   <h1>车账号</h1>
                   <p>先看状态，再找客户</p>
-                  <a className="version-link" href="/update.html?v=remaining-r1">额度概览版 · 检查更新</a>
+                  <a className="version-link" href="/update.html?v=car-scroll-r1">账号顺序版 · 检查更新</a>
                 </div>
                 <button className="primary square" onClick={addCar} aria-label="新增车账号">
                   <PlusIcon />
@@ -313,7 +312,11 @@ export default function Prototype() {
                 {activeCars
                   .filter((c) => carFilter === "all" || c.state === carFilter)
                   .filter((c) => c.name.includes(query))
-                  .slice((page - 1) * 10, page * 10)
+                  .sort((a, b) => {
+                    const sequence = (name: string) => Number(name.normalize("NFKC").trim().match(/^\d+/)?.[0] ?? Infinity);
+                    const first = sequence(a.name), second = sequence(b.name);
+                    return first === second ? 0 : first < second ? -1 : 1;
+                  })
                   .map((c) => (
                     <button
                       key={c.id}
@@ -325,23 +328,6 @@ export default function Prototype() {
                     </button>
                   ))}
               </div>
-              {activeCars.length > 10 && <div className="pages">
-                <button onClick={() => setPage(1)}>‹</button>
-                <button
-                  className={page === 1 ? "on" : ""}
-                  onClick={() => setPage(1)}
-                >
-                  1
-                </button>
-                <button
-                  className={page === 2 ? "on" : ""}
-                  onClick={() => setPage(2)}
-                >
-                  2
-                </button>
-                <button onClick={() => setPage(2)}>›</button>
-                <span>共 {activeCars.length} 个账号</span>
-              </div>}
               <div className="legend">
                 <span>
                   <i className="dot green" />

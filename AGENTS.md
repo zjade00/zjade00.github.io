@@ -2,6 +2,8 @@
 
 ## Prototype Instructions
 
+Car overview has no pagination: render all matching active cars in one native vertically scrollable list. Sort numerically by the leading account-name number (1, 2, …, 10); full-width digits and leading zeros are supported. Names without a leading number follow numbered accounts in their existing order.
+
 Car overview rows use two lines: colored account name first, customer-state counts followed by remaining quota second. Remaining quota reads the existing owner remaining field (default 100%), preserving manual editing.
 
 2026-09-13 categories: Add 分类 navigation with tomorrow/day-after/third-day expiry (red/orange/green), archived cars/users grouped under 归档, watch and confirmed customer lists. 下车 and 退订 now ARCHIVE, superseding deletion below. Preserve records in existing cm2 storage. Exclude archived customers from active lists and financial totals. Car archive captures totals and customer snapshots, but leaves its customers active for individual management. Deep red car names use #b42318.
