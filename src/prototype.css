@@ -39,6 +39,9 @@
   font-size: 13px;
 }
 .version-link { display: inline-block; font-size: 12px; color: #667085; margin-top: 5px; }
+.owner-state { border: 0; padding: 0; margin: 0 0 18px; min-width: 0; }
+.owner-state legend { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+.owner-state .choices button { min-height: 46px; font-size: 13px; }
 .delete-record { margin: 24px 0 12px; padding-top: 16px; border-top: 1px solid var(--line); }
 .danger-button { width: 100%; min-height: 46px; border: 1px solid #efb4b7; background: #fff1f2; color: #c71925; font-size: 16px; font-weight: 700; border-radius: 9px; }
 .delete-record p { margin: 6px 0; font-size: 12px; color: #667085; }

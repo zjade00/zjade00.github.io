@@ -130,6 +130,7 @@ export default function Prototype() {
   const selected = cars.find((c) => c.id === selectedId);
   const ownerValues = useMemo(() => selected ? {
     name: selected.name,
+    state: selected.state,
     ...accountTotals(customers, selected.id),
     remaining: selected.remaining ?? 100,
     resets: selected.resets ?? 0,
@@ -259,7 +260,7 @@ export default function Prototype() {
                 <div>
                   <h1>车账号</h1>
                   <p>先看状态，再找客户</p>
-                  <a className="version-link" href="/update.html?v=web-r1">Web额度版 · 检查更新</a>
+                  <a className="version-link" href="/update.html?v=state-r1">账号状态版 · 检查更新</a>
                 </div>
                 <button className="primary square" onClick={addCar} aria-label="新增车账号">
                   <PlusIcon />
@@ -539,6 +540,9 @@ function CarEditSheet({ open, close, values, save, remove }: any) {
   useEffect(() => { if (open) setForm(values); }, [values, open]);
   return <BottomSheet open={open} onOpenChange={(v) => !v && close()} title="编辑车主数据"><div className="sheet car-edit-form">
     <label className="field"><span>账号名称</span><input type="text" value={form.name || ""} placeholder="填写车账号名称" onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
+    <fieldset className="owner-state"><legend>账号额度状态</legend><div className="choices three">
+      {([['green', '绿色 · 正常'], ['orange', '橙色 · 有点快'], ['red', '红色 · 非常快']] as const).map(([state, label]) => <button key={state} type="button" aria-pressed={form.state === state} className={form.state === state ? 'selected' : ''} onClick={() => setForm({ ...form, state })}><i className={`dot ${state}`} />{label}</button>)}
+    </div></fieldset>
     {carFields.map(([key,label,unit]) => <label className="field" key={key}><span>{label}（{unit}）{["spent", "cost", "profit"].includes(key) && " · 自动汇总"}</span><input type="number" readOnly={["spent", "cost", "profit"].includes(key)} step={key === "resets" ? "1" : "any"} value={form[key]} onChange={(e) => setForm({ ...form, [key]: Number(e.target.value) })} /></label>)}<div className="delete-record"><button type="button" className="danger-button" onClick={remove}>退订</button><p>点击后立即删除该车账号信息。</p></div><div className="actions"><button onClick={close}>取消</button><button className="primary" disabled={!form.name?.trim()} onClick={() => { const { spent, cost, profit, ...manualValues } = form; if (!form.name?.trim()) return; save({ ...manualValues, name: form.name.trim() }); close(); }}>保存</button></div></div></BottomSheet>;
 }
 
