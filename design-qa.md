@@ -1,5 +1,7 @@
 # Design QA
 
+2026-09-13 deletion controls: build/runtime check pass. Executed actual removeCustomer/removeCar handler bodies against isolated fixtures; verified single customer removal, corresponding membership and allocated quota adjustment, account-only removal, retained customers detached to carId 0, and untouched unrelated accounts/customers. No live customer records deleted. Version/update recovery marker synchronized to delete-r1.
+
 2026-09-13 six-field owner summary: verified 393px-wide browser layout with cell y positions 117/117/117 and 173/173/173; header gap 20px. Saved owner profit 360, reset count 2, total quota 200 and reloaded successfully; header reflects these saved values. Only local preview test data used. Production build and runtime integrity pass.
 
 ## 2026-09-13 native scrolling correction

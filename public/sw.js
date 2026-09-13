@@ -1,4 +1,4 @@
-const CACHE = "customer-manager-v6-owner6-r2";
+const CACHE = "customer-manager-v7-delete-r1";
 const APP_SHELL = ["/", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png"];
 
 self.addEventListener("install", (event) => {

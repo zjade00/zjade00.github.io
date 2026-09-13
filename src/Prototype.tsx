@@ -153,7 +153,24 @@ export default function Prototype() {
     })));
     setCustomerForm({ open: false });
   };
-  const customerEditor = <CustomerFormSheet open={customerForm.open} close={() => setCustomerForm({ open: false })} customer={customerForm.customer} cars={cars} save={saveCustomer} />;
+  const removeCustomer = () => {
+    const customer = customerForm.customer;
+    if (!customer) return;
+    setCustomers((items) => items.filter((item) => item.id !== customer.id));
+    setCars((items) => items.map((car) => ({ ...car,
+      customers: car.customers.filter((id) => id !== customer.id),
+      quota: car.id === customer.carId ? Math.max(0, car.quota - customer.quota) : car.quota,
+    })));
+    setCustomerForm({ open: false });
+  };
+  const removeCar = () => {
+    if (!selected) return;
+    setCars((items) => items.filter((car) => car.id !== selected.id));
+    setCustomers((items) => items.map((customer) => customer.carId === selected.id ? { ...customer, carId: 0 } : customer));
+    setCarForm(false); setPriorityOpen(false); setCustomerForm({ open: false });
+    setSelectedId(null); setTab("cars"); setPage(1);
+  };
+  const customerEditor = <CustomerFormSheet open={customerForm.open} close={() => setCustomerForm({ open: false })} customer={customerForm.customer} cars={cars} save={saveCustomer} remove={removeCustomer} />;
   const visible = useMemo(() => {
     let a = customers.filter((c) =>
       selectedId ? c.carId === selectedId : true,
@@ -217,7 +234,7 @@ export default function Prototype() {
             </div>
           </main>
         </MobileScroll>
-        <CarEditSheet open={carForm} close={() => setCarForm(false)} values={ownerValues} save={(values) => setCars((a) => a.map((c) => c.id === selected.id ? { ...c, ...values } : c))} />
+        <CarEditSheet open={carForm} close={() => setCarForm(false)} values={ownerValues} remove={removeCar} save={(values) => setCars((a) => a.map((c) => c.id === selected.id ? { ...c, ...values } : c))} />
         <PrioritySheet open={priorityOpen} close={() => setPriorityOpen(false)} setSort={setSort} />
         {customerEditor}
         {navigation}
@@ -233,7 +250,7 @@ export default function Prototype() {
                 <div>
                   <h1>车账号</h1>
                   <p>先看状态，再找客户</p>
-                  <a className="version-link" href="/update.html?v=owner6-r2">六项统计版 · 检查更新</a>
+                  <a className="version-link" href="/update.html?v=delete-r1">退订下车版 · 检查更新</a>
                 </div>
                 <button className="primary square" onClick={addCar} aria-label="新增车账号">
                   <PlusIcon />
@@ -509,24 +526,24 @@ function Counts({ v }: { v: number[] }) {
     </span>
   );
 }
-function CarEditSheet({ open, close, values, save }: any) {
+function CarEditSheet({ open, close, values, save, remove }: any) {
   const [form, setForm] = useState(values);
   useEffect(() => { if (open) setForm(values); }, [values, open]);
-  return <BottomSheet open={open} onOpenChange={(v) => !v && close()} title="编辑车主数据"><div className="sheet car-edit-form">{carFields.map(([key,label,unit]) => <label className="field" key={key}><span>{label}（{unit}）</span><input type="number" step={key === "resets" ? "1" : "any"} value={form[key]} onChange={(e) => setForm({ ...form, [key]: Number(e.target.value) })} /></label>)}<div className="actions"><button onClick={close}>取消</button><button className="primary" onClick={() => { save(form); close(); }}>保存</button></div></div></BottomSheet>;
+  return <BottomSheet open={open} onOpenChange={(v) => !v && close()} title="编辑车主数据"><div className="sheet car-edit-form">{carFields.map(([key,label,unit]) => <label className="field" key={key}><span>{label}（{unit}）</span><input type="number" step={key === "resets" ? "1" : "any"} value={form[key]} onChange={(e) => setForm({ ...form, [key]: Number(e.target.value) })} /></label>)}<div className="delete-record"><button type="button" className="danger-button" onClick={remove}>退订</button><p>点击后立即删除该车账号信息。</p></div><div className="actions"><button onClick={close}>取消</button><button className="primary" onClick={() => { save(form); close(); }}>保存</button></div></div></BottomSheet>;
 }
 
 function PrioritySheet({ open, close, setSort }: { open: boolean; close: () => void; setSort: (s: "risk" | "profit") => void }) {
   return <BottomSheet open={open} onOpenChange={(v) => !v && close()} title="优先处理" snap="small"><div className="sheet priority-sheet"><button className="wide" onClick={() => { setSort("risk"); close(); }}>按客户状态排列<span>已确定 → 需留意 → 未判断 → 可信</span></button><button className="wide" onClick={() => { setSort("profit"); close(); }}>按利润状态排列<span>利润低的优先</span></button></div></BottomSheet>;
 }
 
-function CustomerFormSheet({ open, close, customer, cars, save }: { open: boolean; close: () => void; customer?: Customer; cars: Car[]; save: (v: Omit<Customer, "id">) => void }) {
+function CustomerFormSheet({ open, close, customer, cars, save, remove }: { open: boolean; close: () => void; customer?: Customer; cars: Car[]; save: (v: Omit<Customer, "id">) => void; remove: () => void }) {
   const blank = { name: "", wechat: "", carId: cars[0]?.id ?? 0, risk: "unknown" as Risk, fee: 0, quota: 0, tags: [] as string[], usage: "不清楚", reason: "", note: "", special: "", joined: "", expires: "", lastLogin: "", device: "Windows" as Customer["device"] };
   const [form, setForm] = useState(blank);
   useEffect(() => setForm(customer ? { ...blank, ...customer } : blank), [customer, open]);
   const update = (key: string, value: any) => setForm((f) => ({ ...f, [key]: value }));
   return <BottomSheet open={open} onOpenChange={(v) => !v && close()} title={customer ? "编辑客户" : "新增客户"} snap="large"><div className="sheet customer-form">
     <label className="field"><span>微信名</span><input value={form.name} onChange={(e) => update('name', e.target.value)} placeholder="填写微信名" /></label>
-    <label className="field"><span>所属账号</span><select value={form.carId} onChange={(e) => update('carId', Number(e.target.value))}>{cars.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+    <label className="field"><span>所属账号</span><select value={form.carId} onChange={(e) => update('carId', Number(e.target.value))}>{!cars.some((c) => c.id === form.carId) && <option value={form.carId}>原车已退订，请重新选择账号</option>}{cars.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
     <div className="form-grid"><label className="field"><span>收费金额（元）</span><input type="number" value={form.fee} onChange={(e) => update('fee', Number(e.target.value))} /></label><label className="field"><span>购买额度（%）</span><input type="number" value={form.quota} onChange={(e) => update('quota', Number(e.target.value))} /></label></div>
     <div className="form-grid"><label className="field"><span>上车时间</span><input type="date" value={form.joined} onChange={(e) => update('joined', e.target.value)} /></label><label className="field"><span>到期时间</span><input type="date" value={form.expires} onChange={(e) => update('expires', e.target.value)} /></label></div>
     <div className="form-grid"><label className="field"><span>最后登录时间</span><input type="datetime-local" value={form.lastLogin} onChange={(e) => update('lastLogin', e.target.value)} /></label><label className="field"><span>设备型号</span><select value={form.device} onChange={(e) => update('device', e.target.value)}><option>Windows</option><option>Mac</option><option>Linux</option></select></label></div>
@@ -535,6 +552,7 @@ function CustomerFormSheet({ open, close, customer, cars, save }: { open: boolea
     <label className="field"><span>客户标签（可多选）</span><div className="choices">{preset.map((t) => <button type="button" key={t} className={form.tags.includes(t) ? 'selected' : ''} onClick={() => update('tags', form.tags.includes(t) ? form.tags.filter((x) => x !== t) : [...form.tags, t])}>{t}</button>)}</div></label>
     <label className="field"><span>估算用量</span><select value={form.usage} onChange={(e) => update('usage', e.target.value)}><option>不清楚</option><option>较少</option><option>一般</option><option>偏多</option><option>很多</option></select></label>
     <label className="field"><span>简短说明</span><textarea value={form.note} onChange={(e) => update('note', e.target.value)} placeholder="填写特殊要求或说明" /></label>
+    {customer && <div className="delete-record"><button type="button" className="danger-button" onClick={remove}>下车</button><p>点击后立即删除该客户信息。</p></div>}
     <div className="actions"><button onClick={close}>取消</button><button className="primary" onClick={() => form.name.trim() && save(form)}>保存客户</button></div>
   </div></BottomSheet>;
 }
