@@ -1,4 +1,4 @@
-const CACHE = "customer-manager-v5-owner-summary";
+const CACHE = "customer-manager-v6-owner6-r2";
 const APP_SHELL = ["/", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png"];
 
 self.addEventListener("install", (event) => {
@@ -17,8 +17,12 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
+  if (new URL(event.request.url).pathname === '/update.html') {
+    event.respondWith(fetch(event.request, { cache: 'no-store' }));
+    return;
+  }
   event.respondWith(
-    fetch(event.request)
+    fetch(event.request, event.request.mode === 'navigate' ? { cache: 'no-store' } : {})
       .then((response) => {
         const copy = response.clone();
         caches.open(CACHE).then((cache) => cache.put(event.request, copy));
