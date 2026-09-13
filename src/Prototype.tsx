@@ -52,6 +52,11 @@ type Car = {
   state: State;
   quota: number;
   customers: number[];
+  spent?: number;
+  cost?: number;
+  profit?: number;
+  remaining?: number;
+  resets?: number;
 };
 const seedCars: Car[] = [];
 const seedCustomers: Customer[] = [];
@@ -93,7 +98,10 @@ export default function Prototype() {
     [sheet, setSheet] = useState(false),
     [risk, setRisk] = useState<Risk | null>(null),
     [tagFilter, setTags] = useState<string[]>([]),
-    [sort, setSort] = useState<"default" | "profit" | "priority">("priority");
+    [sort, setSort] = useState<"default" | "profit" | "risk">("risk"),
+    [customerForm, setCustomerForm] = useState<{ open: boolean; customer?: Customer }>({ open: false }),
+    [carForm, setCarForm] = useState(false),
+    [priorityOpen, setPriorityOpen] = useState(false);
   useEffect(() => {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(() => undefined);
@@ -108,52 +116,11 @@ export default function Prototype() {
     [customers],
   );
   const selected = cars.find((c) => c.id === selectedId);
-  const ask = (label: string, current = "") => window.prompt(label, current)?.trim();
   const addCar = () => {
-    const name = ask("请输入车组名称");
-    if (!name) return;
-    const stateText = ask("账号状态：绿色 / 橙色 / 红色", "绿色");
-    const state: State = stateText === "红色" ? "red" : stateText === "橙色" ? "orange" : "green";
-    const id = Date.now();
-    setCars((items) => [...items, { id, name, state, quota: 0, customers: [] }]);
+    setCars((items) => [...items, { id: Date.now(), name: `新车账号${items.length + 1}`, state: "green", quota: 0, customers: [], spent: 0, cost: 0, profit: 0, remaining: 100, resets: 0 }]);
   };
-  const addCustomer = () => {
-    if (!cars.length) return window.alert("请先新增一个车账号。 ");
-    const name = ask("客户姓名"); if (!name) return;
-    const wechat = ask("微信名或微信号", "") || "";
-    const carName = ask(`所属账号：${cars.map((c) => c.name).join("、")}`, cars[0].name);
-    const car = cars.find((c) => c.name === carName) || cars[0];
-    const fee = Number(ask("收费金额（元）", "0")) || 0;
-    const quota = Number(ask("购买额度百分比，例如 10", "10")) || 0;
-    const joined = ask("上车时间（YYYY-MM-DD）", new Date().toISOString().slice(0, 10)) || "";
-    const expires = ask("到期时间（YYYY-MM-DD）", "") || "";
-    const lastLogin = ask("最后登录时间（YYYY-MM-DD HH:mm）", "") || "";
-    const deviceText = ask("设备型号：Windows / Mac / Linux", "Windows");
-    const device: Customer["device"] = deviceText?.toLowerCase() === "mac" ? "Mac" : deviceText?.toLowerCase() === "linux" ? "Linux" : "Windows";
-    const id = Date.now();
-    const item: Customer = { id, name, wechat, carId: car.id, risk: "unknown", fee, quota, tags: [], usage: "不清楚", joined, expires, lastLogin, device };
-    setCustomers((items) => [...items, item]);
-    setCars((items) => items.map((c) => c.id === car.id ? { ...c, quota: c.quota + quota, customers: [...c.customers, id] } : c));
-  };
-  const editCustomer = (c: Customer) => {
-    const name = ask("客户姓名", c.name); if (!name) return;
-    const fee = Number(ask("收费金额（元）", String(c.fee))) || 0;
-    const quota = Number(ask("购买额度百分比", String(c.quota))) || 0;
-    const status = ask("客户状态：可信 / 未判断 / 需留意 / 已确定", labels[c.risk]);
-    const risk: Risk = status === "可信" ? "safe" : status === "需留意" ? "watch" : status === "已确定" ? "confirmed" : "unknown";
-    const selectedTags = (ask(`客户标签，用逗号分隔：${preset.join("、")}`, c.tags.join(",")) || "").split(/[,，]/).map((t) => t.trim()).filter(Boolean);
-    const usage = ask("估算用量：不清楚 / 较少 / 一般 / 偏多 / 很多", c.usage) || c.usage;
-    const reason = risk === "watch" ? ask(`需留意原因：${reasons.join("、")}`, c.reason || reasons[0]) : "";
-    const note = ask("简短说明", c.note || "") || "";
-    const special = ask("特殊备注", c.special || "") || "";
-    const joined = ask("上车时间（YYYY-MM-DD）", c.joined) || c.joined;
-    const expires = ask("到期时间（YYYY-MM-DD）", c.expires) || c.expires;
-    const lastLogin = ask("最后登录时间（YYYY-MM-DD HH:mm）", c.lastLogin || "") || "";
-    const deviceText = ask("设备型号：Windows / Mac / Linux", c.device || "Windows");
-    const device: Customer["device"] = deviceText?.toLowerCase() === "mac" ? "Mac" : deviceText?.toLowerCase() === "linux" ? "Linux" : "Windows";
-    setCustomers((items) => items.map((x) => x.id === c.id ? { ...x, name, fee, quota, risk, tags: selectedTags, usage, reason, note, special, joined, expires, lastLogin, device } : x));
-    setCars((items) => items.map((car) => car.id === c.carId ? { ...car, quota: Math.max(0, car.quota - c.quota + quota) } : car));
-  };
+  const addCustomer = () => cars.length && setCustomerForm({ open: true });
+  const editCustomer = (c: Customer) => setCustomerForm({ open: true, customer: c });
   const visible = useMemo(() => {
     let a = customers.filter((c) =>
       selectedId ? c.carId === selectedId : true,
@@ -170,10 +137,10 @@ export default function Prototype() {
     return [...a].sort((x, y) =>
       sort === "profit"
         ? x.fee - x.quota * 8 - (y.fee - y.quota * 8)
-        : sort === "priority"
+        : sort === "risk"
           ? score(x.risk) - score(y.risk) ||
             x.fee - x.quota * 8 - (y.fee - y.quota * 8)
-          : x.id - y.id,
+        : x.id - y.id,
     );
   }, [customers, selectedId, applied, risk, tagFilter, sort]);
   const counts = (car: Car) =>
@@ -195,22 +162,22 @@ export default function Prototype() {
                 <i className={`dot ${selected.state}`} />
                 <b>{selected.name}</b>
               </div>
-              <button className="link" onClick={() => setSheet(true)}>
+              <button className="link" onClick={() => setCarForm(true)}>
                 编辑
               </button>
             </header>
             <section className="summary">
               <div>
-                <span>总额度</span>
-                <b>100%</b>
+                <span>剩余额度</span>
+                <b>{selected.remaining ?? 100}%</b>
               </div>
               <div>
                 <span>已拼</span>
-                <b>{selected.quota}%</b>
+                <b>{selected.spent ?? selected.quota}%</b>
               </div>
               <div>
                 <span>已拼成本</span>
-                <b>¥{selected.quota * 8}</b>
+                <b>¥{selected.cost ?? selected.quota * 8}</b>
               </div>
               <div>
                 <span>利润</span>
@@ -227,7 +194,7 @@ export default function Prototype() {
             </section>
             <div className="section-head">
               <h2>本车客户 · {visible.length} 人</h2>
-              <button onClick={() => setSheet(true)}>优先处理⌄</button>
+              <button onClick={() => setPriorityOpen(true)}>优先处理⌄</button>
             </div>
             <div className="customer-list">
               {visible.map((c) => (
@@ -236,23 +203,8 @@ export default function Prototype() {
             </div>
           </main>
         </MobileScroll>
-        <Sheet
-          open={sheet}
-          close={() => setSheet(false)}
-          car={selected}
-          rename={(name) =>
-            setCars((a) =>
-              a.map((c) => (c.id === selected.id ? { ...c, name } : c)),
-            )
-          }
-          changeState={(state) => setCars((a) => a.map((c) => c.id === selected.id ? { ...c, state } : c))}
-          risk={risk}
-          setRisk={setRisk}
-          tags={tagFilter}
-          setTags={setTags}
-          sort={sort}
-          setSort={setSort}
-        />
+        <CarEditSheet open={carForm} close={() => setCarForm(false)} car={selected} save={(values) => setCars((a) => a.map((c) => c.id === selected.id ? { ...c, ...values } : c))} />
+        <PrioritySheet open={priorityOpen} close={() => setPriorityOpen(false)} setSort={setSort} />
       </>
     );
   return (
@@ -311,11 +263,7 @@ export default function Prototype() {
                       className="car-row"
                       onClick={() => setSelectedId(c.id)}
                     >
-                      <span className={`car-name ${c.state}`}>
-                        <i className={`dot ${c.state}`} />
-                        {c.name}
-                      </span>
-                      <Counts v={counts(c)} />
+                      <span className="car-row-copy"><span className={`car-name ${c.state}`}><i className={`dot ${c.state}`} />{c.name}</span><span className="car-status-line">客户状态 <Counts v={counts(c)} /></span></span>
                       <ChevronRightIcon />
                     </button>
                   ))}
@@ -395,6 +343,18 @@ export default function Prototype() {
         sort={sort}
         setSort={setSort}
       />
+      <CustomerFormSheet open={customerForm.open} close={() => setCustomerForm({ open: false })} customer={customerForm.customer} cars={cars} save={(item) => {
+        if (customerForm.customer) {
+          const old = customerForm.customer;
+          setCustomers((items) => items.map((x) => x.id === old.id ? { ...x, ...item } : x));
+          setCars((items) => items.map((c) => c.id === old.carId ? { ...c, quota: Math.max(0, c.quota - old.quota + item.quota) } : c));
+        } else {
+          const id = Date.now();
+          setCustomers((items) => [...items, { ...item, id }]);
+          setCars((items) => items.map((c) => c.id === item.carId ? { ...c, quota: c.quota + item.quota, customers: [...c.customers, id] } : c));
+        }
+        setCustomerForm({ open: false });
+      }} />
     </>
   );
 }
@@ -415,7 +375,7 @@ function CustomerHome({
   search: () => void;
   open: () => void;
   setRisk: (r: Risk | null) => void;
-  setSort: (s: "default" | "profit" | "priority") => void;
+  setSort: (s: "default" | "profit" | "risk") => void;
   addCustomer: () => void;
   editCustomer: (c: Customer) => void;
 }) {
@@ -478,8 +438,8 @@ function CustomerHome({
         <button onClick={() => setRisk("confirmed")}>已确定</button>
         <button onClick={() => setSort("profit")}>低利润优先</button>
         <button onClick={open}>事儿多</button>
-        <button className="active" onClick={() => setSort("priority")}>
-          优先处理
+        <button className="active" onClick={() => setSort("risk")}>
+          按客户状态
         </button>
       </div>
       <div className="customer-list compact">
@@ -556,6 +516,36 @@ function Counts({ v }: { v: number[] }) {
     </span>
   );
 }
+function CarEditSheet({ open, close, car, save }: { open: boolean; close: () => void; car?: Car; save: (v: Partial<Car>) => void }) {
+  const [form, setForm] = useState({ spent: 0, cost: 0, profit: 0, remaining: 100, resets: 0 });
+  useEffect(() => setForm({ spent: car?.spent ?? car?.quota ?? 0, cost: car?.cost ?? 0, profit: car?.profit ?? 0, remaining: car?.remaining ?? 100, resets: car?.resets ?? 0 }), [car]);
+  return <BottomSheet open={open} onOpenChange={(v) => !v && close()} title="编辑车主数据" snap="large"><div className="sheet car-edit-form"><p className="form-note">这里只编辑车主账号数据，不包含客户信息。</p>{([['spent','已拼多少'],['cost','已拼成本'],['profit','利润'],['remaining','剩余额度'],['resets','重置次数']] as const).map(([key,label]) => <label className="field" key={key}><span>{label}</span><input type="number" value={form[key]} onChange={(e) => setForm({ ...form, [key]: Number(e.target.value) })} /></label>)}<div className="actions"><button onClick={close}>取消</button><button className="primary" onClick={() => { save(form); close(); }}>保存</button></div></div></BottomSheet>;
+}
+
+function PrioritySheet({ open, close, setSort }: { open: boolean; close: () => void; setSort: (s: "risk" | "profit") => void }) {
+  return <BottomSheet open={open} onOpenChange={(v) => !v && close()} title="优先处理" snap="small"><div className="sheet priority-sheet"><button className="wide" onClick={() => { setSort("risk"); close(); }}>按客户状态排列<span>已确定 → 需留意 → 未判断 → 可信</span></button><button className="wide" onClick={() => { setSort("profit"); close(); }}>按利润状态排列<span>利润低的优先</span></button></div></BottomSheet>;
+}
+
+function CustomerFormSheet({ open, close, customer, cars, save }: { open: boolean; close: () => void; customer?: Customer; cars: Car[]; save: (v: Omit<Customer, "id">) => void }) {
+  const blank = { name: "", wechat: "", carId: cars[0]?.id ?? 0, risk: "unknown" as Risk, fee: 0, quota: 0, tags: [] as string[], usage: "不清楚", reason: "", note: "", special: "", joined: "", expires: "", lastLogin: "", device: "Windows" as Customer["device"] };
+  const [form, setForm] = useState(blank);
+  useEffect(() => setForm(customer ? { ...blank, ...customer } : blank), [customer, open]);
+  const update = (key: string, value: any) => setForm((f) => ({ ...f, [key]: value }));
+  return <BottomSheet open={open} onOpenChange={(v) => !v && close()} title={customer ? "编辑客户" : "新增客户"} snap="large"><div className="sheet customer-form">
+    <label className="field"><span>微信名</span><input value={form.name} onChange={(e) => update('name', e.target.value)} placeholder="填写微信名" /></label>
+    <label className="field"><span>所属账号</span><select value={form.carId} onChange={(e) => update('carId', Number(e.target.value))}>{cars.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+    <div className="form-grid"><label className="field"><span>收费金额（元）</span><input type="number" value={form.fee} onChange={(e) => update('fee', Number(e.target.value))} /></label><label className="field"><span>购买额度（%）</span><input type="number" value={form.quota} onChange={(e) => update('quota', Number(e.target.value))} /></label></div>
+    <div className="form-grid"><label className="field"><span>上车时间</span><input type="date" value={form.joined} onChange={(e) => update('joined', e.target.value)} /></label><label className="field"><span>到期时间</span><input type="date" value={form.expires} onChange={(e) => update('expires', e.target.value)} /></label></div>
+    <div className="form-grid"><label className="field"><span>最后登录时间</span><input type="datetime-local" value={form.lastLogin} onChange={(e) => update('lastLogin', e.target.value)} /></label><label className="field"><span>设备型号</span><select value={form.device} onChange={(e) => update('device', e.target.value)}><option>Windows</option><option>Mac</option><option>Linux</option></select></label></div>
+    <label className="field"><span>客户状态</span><select value={form.risk} onChange={(e) => update('risk', e.target.value)}><option value="safe">可信</option><option value="unknown">未判断</option><option value="watch">需留意</option><option value="confirmed">已确定（老鼠屎）</option></select></label>
+    {form.risk === 'watch' && <label className="field"><span>需留意原因</span><select value={form.reason} onChange={(e) => update('reason', e.target.value)}>{reasons.map((x) => <option key={x}>{x}</option>)}</select></label>}
+    <label className="field"><span>客户标签（可多选）</span><div className="choices">{preset.map((t) => <button type="button" key={t} className={form.tags.includes(t) ? 'selected' : ''} onClick={() => update('tags', form.tags.includes(t) ? form.tags.filter((x) => x !== t) : [...form.tags, t])}>{t}</button>)}</div></label>
+    <label className="field"><span>估算用量</span><select value={form.usage} onChange={(e) => update('usage', e.target.value)}><option>不清楚</option><option>较少</option><option>一般</option><option>偏多</option><option>很多</option></select></label>
+    <label className="field"><span>简短说明</span><textarea value={form.note} onChange={(e) => update('note', e.target.value)} placeholder="填写特殊要求或说明" /></label>
+    <div className="actions"><button onClick={close}>取消</button><button className="primary" onClick={() => form.name.trim() && save(form)}>保存客户</button></div>
+  </div></BottomSheet>;
+}
+
 function Sheet({
   open,
   close,
@@ -578,8 +568,8 @@ function Sheet({
   setRisk: (r: Risk | null) => void;
   tags: string[];
   setTags: (t: string[]) => void;
-  sort: "default" | "profit" | "priority";
-  setSort: (s: "default" | "profit" | "priority") => void;
+  sort: "default" | "profit" | "risk";
+  setSort: (s: "default" | "profit" | "risk") => void;
 }) {
   const [name, setName] = useState(car?.name || "");
   useEffect(() => setName(car?.name || ""), [car]);
@@ -676,7 +666,7 @@ function Sheet({
               [
                 ["default", "默认"],
                 ["profit", "低利润优先"],
-                ["priority", "优先处理"],
+                ["risk", "按客户状态"],
               ] as const
             ).map(([v, l]) => (
               <button

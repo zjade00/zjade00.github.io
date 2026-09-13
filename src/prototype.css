@@ -109,16 +109,20 @@
 .empty-state p { margin: 0 0 18px; color: var(--muted); font-size: 13px; line-height: 1.6; }
 .sub-label { margin-top: 12px; }
 .car-row {
-  height: 51px;
+  min-height: 66px;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: #fff;
   display: grid;
-  grid-template-columns: minmax(118px, 1fr) auto 16px;
+  grid-template-columns: minmax(0, 1fr) 16px;
   align-items: center;
   padding: 5px 9px;
   text-align: left;
 }
+.car-row-copy { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.car-status-line { color: #667085; font-size: 12px; display: flex; align-items: center; gap: 6px; }
+.car-status-line .counts { gap: 8px; }
+.car-status-line .counts span { font-size: 11px; }
 .car-name {
   display: inline-flex;
   align-items: center;
@@ -453,6 +457,14 @@
 .sheet {
   padding: 0 16px calc(var(--mobile-safe-area-height) + 20px);
 }
+.form-note { color: #667085; font-size: 13px; margin: 0 0 14px; }
+.field { display: flex; flex-direction: column; gap: 6px; margin: 0 0 13px; font-size: 13px; font-weight: 700; }
+.field input, .field select, .field textarea { width: 100%; box-sizing: border-box; border: 1px solid var(--line); border-radius: 9px; background: #fff; padding: 11px 12px; font: inherit; font-weight: 400; color: #172033; }
+.field textarea { min-height: 76px; resize: vertical; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.priority-sheet { display: grid; gap: 10px; }
+.priority-sheet .wide { flex-direction: column; align-items: flex-start; gap: 4px; padding: 14px; font-size: 15px; }
+.priority-sheet .wide span { color: #667085; font-size: 12px; font-weight: 400; }
 .sheet section {
   margin-bottom: 14px;
 }
@@ -488,6 +500,7 @@
   background: #fff;
   padding: 11px;
 }
+.mobile-app-viewport .status-bar { display: none !important; }
 .choices {
   display: grid;
   grid-template-columns: 1fr 1fr;
