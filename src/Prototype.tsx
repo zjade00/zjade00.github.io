@@ -60,7 +60,12 @@ type Car = {
   profit?: number;
   remaining?: number;
   resets?: number;
+  totalQuota?: number;
 };
+const carFields = [
+  ["spent", "已拼多少", "%"], ["cost", "已拼成本", "元"], ["profit", "利润", "元"],
+  ["remaining", "剩余额度", "%"], ["resets", "重置次数", "次"], ["totalQuota", "总拼额度", "%"],
+] as const;
 const seedCars: Car[] = [];
 const seedCustomers: Customer[] = [];
 const labels: Record<Risk, string> = {
@@ -119,6 +124,14 @@ export default function Prototype() {
     [customers],
   );
   const selected = cars.find((c) => c.id === selectedId);
+  const ownerValues = useMemo(() => selected ? {
+    spent: selected.spent ?? selected.quota,
+    cost: selected.cost ?? selected.quota * 8,
+    profit: selected.profit ?? customers.filter((c) => c.carId === selected.id).reduce((sum, c) => sum + c.fee - c.quota * 8, 0),
+    remaining: selected.remaining ?? 100,
+    resets: selected.resets ?? 0,
+    totalQuota: selected.totalQuota ?? 0,
+  } : undefined, [selected, customers]);
   const addCar = () => {
     setCars((items) => [...items, { id: Date.now(), name: `新车账号${items.length + 1}`, state: "green", quota: 0, customers: [], spent: 0, cost: 0, profit: 0, remaining: 100, resets: 0 }]);
   };
@@ -187,31 +200,12 @@ export default function Prototype() {
               </button>
             </header>
             <section className="summary">
-              <div>
-                <span>剩余额度</span>
-                <b>{selected.remaining ?? 100}%</b>
-              </div>
-              <div>
-                <span>已拼</span>
-                <b>{selected.spent ?? selected.quota}%</b>
-              </div>
-              <div>
-                <span>已拼成本</span>
-                <b>¥{selected.cost ?? selected.quota * 8}</b>
-              </div>
-              <div>
-                <span>利润</span>
-                <b className="pos">
-                  ¥
-                  {customers
-                    .filter((c) => c.carId === selected.id)
-                    .reduce((s, c) => s + c.fee - c.quota * 8, 0)}
-                </b>
-              </div>
-              <p>
-                客户状态 <Counts v={counts(selected)} />
-              </p>
+              {carFields.map(([key, label, unit]) => <div key={key}>
+                <span>{label}</span>
+                <b className={key === "profit" ? (ownerValues.profit < 0 ? "neg" : "pos") : ""}>{unit === "元" ? `¥${ownerValues[key]}` : `${ownerValues[key]}${unit}`}</b>
+              </div>)}
             </section>
+            <p className="owner-customer-counts">客户状态 <Counts v={counts(selected)} /></p>
             <div className="section-head">
               <h2>本车客户 · {visible.length} 人</h2>
               <button onClick={() => setPriorityOpen(true)}>优先处理⌄</button>
@@ -223,7 +217,7 @@ export default function Prototype() {
             </div>
           </main>
         </MobileScroll>
-        <CarEditSheet open={carForm} close={() => setCarForm(false)} car={selected} save={(values) => setCars((a) => a.map((c) => c.id === selected.id ? { ...c, ...values } : c))} />
+        <CarEditSheet open={carForm} close={() => setCarForm(false)} values={ownerValues} save={(values) => setCars((a) => a.map((c) => c.id === selected.id ? { ...c, ...values } : c))} />
         <PrioritySheet open={priorityOpen} close={() => setPriorityOpen(false)} setSort={setSort} />
         {customerEditor}
         {navigation}
@@ -514,10 +508,10 @@ function Counts({ v }: { v: number[] }) {
     </span>
   );
 }
-function CarEditSheet({ open, close, car, save }: { open: boolean; close: () => void; car?: Car; save: (v: Partial<Car>) => void }) {
-  const [form, setForm] = useState({ spent: 0, cost: 0, profit: 0, remaining: 100, resets: 0 });
-  useEffect(() => setForm({ spent: car?.spent ?? car?.quota ?? 0, cost: car?.cost ?? 0, profit: car?.profit ?? 0, remaining: car?.remaining ?? 100, resets: car?.resets ?? 0 }), [car]);
-  return <BottomSheet open={open} onOpenChange={(v) => !v && close()} title="编辑车主数据" snap="large"><div className="sheet car-edit-form"><p className="form-note">这里只编辑车主账号数据，不包含客户信息。</p>{([['spent','已拼多少'],['cost','已拼成本'],['profit','利润'],['remaining','剩余额度'],['resets','重置次数']] as const).map(([key,label]) => <label className="field" key={key}><span>{label}</span><input type="number" value={form[key]} onChange={(e) => setForm({ ...form, [key]: Number(e.target.value) })} /></label>)}<div className="actions"><button onClick={close}>取消</button><button className="primary" onClick={() => { save(form); close(); }}>保存</button></div></div></BottomSheet>;
+function CarEditSheet({ open, close, values, save }: any) {
+  const [form, setForm] = useState(values);
+  useEffect(() => { if (open) setForm(values); }, [values, open]);
+  return <BottomSheet open={open} onOpenChange={(v) => !v && close()} title="编辑车主数据"><div className="sheet car-edit-form">{carFields.map(([key,label,unit]) => <label className="field" key={key}><span>{label}（{unit}）</span><input type="number" step={key === "resets" ? "1" : "any"} value={form[key]} onChange={(e) => setForm({ ...form, [key]: Number(e.target.value) })} /></label>)}<div className="actions"><button onClick={close}>取消</button><button className="primary" onClick={() => { save(form); close(); }}>保存</button></div></div></BottomSheet>;
 }
 
 function PrioritySheet({ open, close, setSort }: { open: boolean; close: () => void; setSort: (s: "risk" | "profit") => void }) {

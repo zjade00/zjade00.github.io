@@ -1,5 +1,7 @@
 # Design QA
 
+2026-09-13 six-field owner summary: verified 393px-wide browser layout with cell y positions 117/117/117 and 173/173/173; header gap 20px. Saved owner profit 360, reset count 2, total quota 200 and reloaded successfully; header reflects these saved values. Only local preview test data used. Production build and runtime integrity pass.
+
 ## 2026-09-13 native scrolling correction
 
 Verified in browser at 393 x 700: owner edit opens with focus on triggering button, all five inputs computed at 16px; bottom navigation remains below edit panel. Owner save and switching to customers succeed. Long customer form scrolls to 420px (933px content / 513px viewport) and saves successfully. Replaced app-owned simulated scrolling and sheet gestures with native overflow scrolling; real-phone preview chrome hidden. Production build and unchanged protected runtime checks pass. Physical iPhone keyboard/zoom not directly tested. Existing storage keys preserved; test records exist only on local preview origin.

@@ -2,6 +2,8 @@
 
 ## Prototype Instructions
 
+Owner summary and owner editing now share six fields in this order: 已拼多少、已拼成本、利润、剩余额度、重置次数、总拼额度. Render summary as exactly two rows of three cells with 20px spacing below the account header. Total allocated quota is a manually entered percentage; saved owner profit must appear directly in summary.
+
 2026-09-13 real-phone correction: user explicitly requests native phone scrolling and keyboard behavior, no simulated status bar on phones, no focus zoom on edit, and persistent bottom navigation in detail/edit views. App-owned native scroll containers and Radix editing panels in Prototype.tsx supersede simulated scrolling/keyboard requirements for this production flow. All text entry uses at least 16px; edit opening must not auto-focus an input. Keep existing cm2 storage keys and recorded data.
 
 Project decisions: Chinese mobile shared-account customer manager. Keep the car overview dense enough to scan about 20 accounts in one or two pages, showing only the colored account name and customer-state counts. Account drill-in has exactly four summary values: total quota, allocated quota, allocated cost, and profit. Customer records include joined and expiry dates. Use the preset personality tag “不好说话”, never “情绪起伏大”.

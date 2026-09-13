@@ -391,8 +391,9 @@
   padding-top: 52px;
 }
 .detail-head {
-  height: 46px;
-  margin: 0;
+  min-height: 46px;
+  gap: 10px;
+  margin: 0 0 20px;
 }
 .detail-head svg {
   width: 24px;
@@ -420,16 +421,19 @@
   border: 1px solid var(--line);
   border-radius: 10px;
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   padding: 10px 12px;
-  gap: 9px;
+  gap: 16px 8px;
   margin-bottom: 10px;
   box-shadow: 0 4px 12px #1028380d;
 }
 .summary > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
   display: flex;
   flex-direction: column;
 }
+.owner-customer-counts { display: flex; align-items: center; justify-content: space-between; padding: 4px 2px; }
 .summary span {
   font-size: 12px;
   color: #667085;
