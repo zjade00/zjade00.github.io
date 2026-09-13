@@ -273,7 +273,7 @@ export default function Prototype() {
                 <div>
                   <h1>车账号</h1>
                   <p>先看状态，再找客户</p>
-                  <a className="version-link" href="/update.html?v=categories-r1">分类归档版 · 检查更新</a>
+                  <a className="version-link" href="/update.html?v=remaining-r1">额度概览版 · 检查更新</a>
                 </div>
                 <button className="primary square" onClick={addCar} aria-label="新增车账号">
                   <PlusIcon />
@@ -320,7 +320,7 @@ export default function Prototype() {
                       className="car-row"
                       onClick={() => setSelectedId(c.id)}
                     >
-                      <span className="car-row-copy"><span className={`car-name ${c.state}`}><i className={`dot ${c.state}`} />{c.name}</span><span className="car-status-line">客户状态 <Counts v={counts(c)} /></span></span>
+                      <span className="car-row-copy"><span className={`car-name ${c.state}`}><i className={`dot ${c.state}`} />{c.name}</span><span className="car-status-line"><span>客户状态</span><Counts v={counts(c)} /><span className="car-remaining">剩余额度 <b>{c.remaining ?? 100}%</b></span></span></span>
                       <ChevronRightIcon />
                     </button>
                   ))}

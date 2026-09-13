@@ -135,8 +135,16 @@
   text-align: left;
 }
 .car-row-copy { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.car-status-line { color: #667085; font-size: 12px; display: flex; align-items: center; gap: 6px; }
-.car-status-line .counts { gap: 8px; }
+.car-status-line { color: #667085; font-size: 12px; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.car-status-line .counts { gap: 5px; }
+.car-remaining { margin-left: auto; font-size: 11px; }
+.car-remaining b { color: #252a34; font-variant-numeric: tabular-nums; }
+.car-status-line .counts span { gap: 2px; }
+@media (max-width: 360px) {
+  .car-status-line { gap: 4px; font-size: 11px; }
+  .car-status-line .counts { gap: 3px; }
+  .car-status-line .counts .dot { width: 6px; height: 6px; }
+}
 .car-status-line .counts span { font-size: 11px; }
 .car-name {
   display: inline-flex;
