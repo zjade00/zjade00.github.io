@@ -127,6 +127,7 @@ export default function Prototype() {
   );
   const selected = cars.find((c) => c.id === selectedId);
   const ownerValues = useMemo(() => selected ? {
+    name: selected.name,
     spent: selected.spent ?? selected.quota,
     ...accountTotals(customers, selected.id),
     remaining: selected.remaining ?? 100,
@@ -134,7 +135,10 @@ export default function Prototype() {
     totalQuota: selected.totalQuota ?? 0,
   } : undefined, [selected, customers]);
   const addCar = () => {
-    setCars((items) => [...items, { id: Date.now(), name: `新车账号${items.length + 1}`, state: "green", quota: 0, customers: [], spent: 0, cost: 0, profit: 0, remaining: 100, resets: 0, updatedAt: new Date().toISOString() }]);
+    const id = Date.now();
+    setCars((items) => [...items, { id, name: `新车账号${items.length + 1}`, state: "green", quota: 0, customers: [], spent: 0, cost: 0, profit: 0, remaining: 100, resets: 0, updatedAt: new Date().toISOString() }]);
+    setSelectedId(id);
+    setCarForm(true);
   };
   const addCustomer = () => cars.length && setCustomerForm({ open: true });
   const editCustomer = (c: Customer) => setCustomerForm({ open: true, customer: c });
@@ -254,7 +258,7 @@ export default function Prototype() {
                 <div>
                   <h1>车账号</h1>
                   <p>先看状态，再找客户</p>
-                  <a className="version-link" href="/update.html?v=totals-r1">自动汇总版 · 检查更新</a>
+                  <a className="version-link" href="/update.html?v=rename-r1">账号改名版 · 检查更新</a>
                 </div>
                 <button className="primary square" onClick={addCar} aria-label="新增车账号">
                   <PlusIcon />
@@ -532,7 +536,9 @@ function Counts({ v }: { v: number[] }) {
 function CarEditSheet({ open, close, values, save, remove }: any) {
   const [form, setForm] = useState(values);
   useEffect(() => { if (open) setForm(values); }, [values, open]);
-  return <BottomSheet open={open} onOpenChange={(v) => !v && close()} title="编辑车主数据"><div className="sheet car-edit-form">{carFields.map(([key,label,unit]) => <label className="field" key={key}><span>{label}（{unit}）{(key === "cost" || key === "profit") && " · 自动汇总"}</span><input type="number" readOnly={key === "cost" || key === "profit"} step={key === "resets" ? "1" : "any"} value={form[key]} onChange={(e) => setForm({ ...form, [key]: Number(e.target.value) })} /></label>)}<div className="delete-record"><button type="button" className="danger-button" onClick={remove}>退订</button><p>点击后立即删除该车账号信息。</p></div><div className="actions"><button onClick={close}>取消</button><button className="primary" onClick={() => { const { cost, profit, ...manualValues } = form; save(manualValues); close(); }}>保存</button></div></div></BottomSheet>;
+  return <BottomSheet open={open} onOpenChange={(v) => !v && close()} title="编辑车主数据"><div className="sheet car-edit-form">
+    <label className="field"><span>账号名称</span><input type="text" value={form.name || ""} placeholder="填写车账号名称" onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
+    {carFields.map(([key,label,unit]) => <label className="field" key={key}><span>{label}（{unit}）{(key === "cost" || key === "profit") && " · 自动汇总"}</span><input type="number" readOnly={key === "cost" || key === "profit"} step={key === "resets" ? "1" : "any"} value={form[key]} onChange={(e) => setForm({ ...form, [key]: Number(e.target.value) })} /></label>)}<div className="delete-record"><button type="button" className="danger-button" onClick={remove}>退订</button><p>点击后立即删除该车账号信息。</p></div><div className="actions"><button onClick={close}>取消</button><button className="primary" disabled={!form.name?.trim()} onClick={() => { const { cost, profit, ...manualValues } = form; if (!form.name?.trim()) return; save({ ...manualValues, name: form.name.trim() }); close(); }}>保存</button></div></div></BottomSheet>;
 }
 
 function PrioritySheet({ open, close, setSort }: { open: boolean; close: () => void; setSort: (s: "risk" | "profit") => void }) {
