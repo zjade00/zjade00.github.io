@@ -479,7 +479,6 @@ function Card({ c, onEdit }: { c: Customer; onEdit: (c: Customer) => void }) {
         </span>
         {c.risk === "confirmed" && <em>需移出</em>}
       </div>
-      <p>微信：{c.wechat}</p>
       <div className="money">
         <span>
           收费 <b>¥{c.fee}</b>
