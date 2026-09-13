@@ -1,4 +1,4 @@
-const CACHE = "customer-manager-v11-rename-r1";
+const CACHE = "customer-manager-v12-web-r1";
 const APP_SHELL = ["/", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png"];
 
 self.addEventListener("install", (event) => {

@@ -1,5 +1,7 @@
 # Design QA
 
+Web quotas: verified native select, saved Web customer with fee 150, card shows Web/cost 100/profit 50; after reload owner summary includes cost 100/profit 50 with 0% contributed by Web. Isolated mixed-account test verifies 10% + 20% + Web gives spent 30%, cost 340 and profit 110 for fees 120/180/150. Legacy percentage behavior, departure and empty totals pass. Build/runtime checks pass.
+
 Automatic owner totals: accountTotals tested with mixed account fixtures, multiple customers, departure, losses, empty accounts and decimal amounts. 10%/120 yuan and 20%/180 yuan sum to cost 240 and net profit 60. Owner totals use all customers rather than filtered visible cards and override legacy manual totals. Build and runtime integrity passed.
 
 2026-09-13 deletion controls: build/runtime check pass. Executed actual removeCustomer/removeCar handler bodies against isolated fixtures; verified single customer removal, corresponding membership and allocated quota adjustment, account-only removal, retained customers detached to carId 0, and untouched unrelated accounts/customers. No live customer records deleted. Version/update recovery marker synchronized to delete-r1.
