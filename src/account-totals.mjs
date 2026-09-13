@@ -1,5 +1,6 @@
 export function customerCost(customer) {
-  return Math.round((customer.quotaType === 'exclusive' ? 200 : customer.quotaType === 'web' ? 100 : Number(customer.quota) * 8) * 100) / 100;
+  const percentageCost = Number(customer.quota) * 8;
+  return Math.round((customer.quotaType === 'exclusive' ? 200 : customer.quotaType === 'web' ? 100 : customer.quotaType === 'web_percentage' ? 100 + percentageCost : percentageCost) * 100) / 100;
 }
 
 export function customerProfit(customer) {

@@ -40,7 +40,7 @@ type Customer = {
   risk: Risk;
   fee: number;
   quota: number;
-  quotaType?: "percentage" | "web" | "exclusive";
+  quotaType?: "percentage" | "web" | "exclusive" | "web_percentage";
   webCost?: number;
   tags: string[];
   usage: string;
@@ -260,7 +260,7 @@ export default function Prototype() {
                 <div>
                   <h1>车账号</h1>
                   <p>先看状态，再找客户</p>
-                  <a className="version-link" href="/update.html?v=exclusive-r2">web独享版 · 检查更新</a>
+                  <a className="version-link" href="/update.html?v=combo-r1">组合额度版 · 检查更新</a>
                 </div>
                 <button className="primary square" onClick={addCar} aria-label="新增车账号">
                   <PlusIcon />
@@ -490,7 +490,7 @@ function Card({ c, onEdit }: { c: Customer; onEdit: (c: Customer) => void }) {
           收费 <b>¥{c.fee}</b>
         </span>
         <span>
-          购买额度 <b>{c.quotaType === "exclusive" ? "web独享" : c.quotaType === "web" ? "Web" : `${c.quota}%`}</b>
+          购买额度 <b>{c.quotaType === "exclusive" ? "web独享" : c.quotaType === "web" ? "Web" : c.quotaType === "web_percentage" ? `Web + ${c.quota}%` : `${c.quota}%`}</b>
         </span>
         <span>
           成本 <b>¥{cost}</b>
@@ -555,12 +555,23 @@ function CustomerFormSheet({ open, close, customer, cars, save, remove }: { open
   const [form, setForm] = useState(blank);
   useEffect(() => setForm(customer ? { ...blank, ...customer } : blank), [customer, open]);
   const update = (key: string, value: any) => setForm((f) => ({ ...f, [key]: value }));
+  const hasPercentage = ["percentage", "web_percentage"].includes(form.quotaType ?? "percentage");
+  const hasWeb = ["web", "web_percentage"].includes(form.quotaType);
   return <BottomSheet open={open} onOpenChange={(v) => !v && close()} title={customer ? "编辑客户" : "新增客户"} snap="large"><div className="sheet customer-form">
     <label className="field"><span>微信名</span><input value={form.name} onChange={(e) => update('name', e.target.value)} placeholder="填写微信名" /></label>
     <label className="field"><span>所属账号</span><select value={form.carId} onChange={(e) => update('carId', Number(e.target.value))}>{!cars.some((c) => c.id === form.carId) && <option value={form.carId}>原车已退订，请重新选择账号</option>}{cars.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
     <label className="field"><span>收费金额（元）</span><input type="number" value={form.fee} onChange={(e) => update('fee', Number(e.target.value))} /></label>
-    <div className="form-grid"><label className="field"><span>购买额度类型</span><select value={form.quotaType} onChange={(e) => update('quotaType', e.target.value)}><option value="percentage">百分比</option><option value="web">Web</option><option value="exclusive">web独享</option></select></label>
-    {form.quotaType === "web" || form.quotaType === "exclusive" ? <label className="field"><span>{form.quotaType === "exclusive" ? "web独享" : "Web"}成本（元）</span><input type="number" readOnly value={form.quotaType === "exclusive" ? 200 : 100} /></label> : <label className="field"><span>购买额度（%）</span><input type="number" value={form.quota} onChange={(e) => update('quota', Number(e.target.value))} /></label>}</div>
+    <fieldset className="quota-options"><legend>购买额度类型</legend><p>百分比与 Web 可同时选择</p>
+      <label><input type="checkbox" checked={hasPercentage} onChange={(e) => update('quotaType', e.target.checked ? (hasWeb ? 'web_percentage' : 'percentage') : (hasWeb ? 'web' : ''))} />百分比</label>
+      <label><input type="checkbox" checked={hasWeb} onChange={(e) => update('quotaType', e.target.checked ? (hasPercentage ? 'web_percentage' : 'web') : (hasPercentage ? 'percentage' : ''))} />Web</label>
+      <label><input type="checkbox" checked={form.quotaType === 'exclusive'} onChange={(e) => update('quotaType', e.target.checked ? 'exclusive' : '')} />web独享</label>
+    </fieldset>
+    <div className="form-grid">
+      {hasPercentage && <label className="field"><span>购买额度（%）</span><input type="number" min="0" value={form.quota} onChange={(e) => update('quota', Number(e.target.value))} /></label>}
+      {hasWeb && <label className="field"><span>Web 成本（元）</span><input type="number" readOnly value={100} /></label>}
+      {form.quotaType === 'exclusive' && <label className="field"><span>web独享成本（元）</span><input type="number" readOnly value={200} /></label>}
+    </div>
+    {form.quotaType && <p className="quota-preview">成本合计：¥{customerCost(form)} · 净利润：¥{customerProfit(form)}</p>}
     <div className="form-grid"><label className="field"><span>上车时间</span><input type="date" value={form.joined} onChange={(e) => update('joined', e.target.value)} /></label><label className="field"><span>到期时间</span><input type="date" value={form.expires} onChange={(e) => update('expires', e.target.value)} /></label></div>
     <div className="form-grid"><label className="field"><span>最后登录时间</span><input type="datetime-local" value={form.lastLogin} onChange={(e) => update('lastLogin', e.target.value)} /></label><label className="field"><span>设备型号</span><select value={form.device} onChange={(e) => update('device', e.target.value)}><option>Windows</option><option>Mac</option><option>Linux</option></select></label></div>
     <label className="field"><span>客户状态</span><select value={form.risk} onChange={(e) => update('risk', e.target.value)}><option value="safe">可信</option><option value="unknown">未判断</option><option value="watch">需留意</option><option value="confirmed">已确定（老鼠屎）</option></select></label>
@@ -569,7 +580,7 @@ function CustomerFormSheet({ open, close, customer, cars, save, remove }: { open
     <label className="field"><span>估算用量</span><select value={form.usage} onChange={(e) => update('usage', e.target.value)}><option>不清楚</option><option>较少</option><option>一般</option><option>偏多</option><option>很多</option></select></label>
     <label className="field"><span>简短说明</span><textarea value={form.note} onChange={(e) => update('note', e.target.value)} placeholder="填写特殊要求或说明" /></label>
     {customer && <div className="delete-record"><button type="button" className="danger-button" onClick={remove}>下车</button><p>点击后立即删除该客户信息。</p></div>}
-    <div className="actions"><button onClick={close}>取消</button><button className="primary" disabled={!form.name.trim()} onClick={() => form.name.trim() && save({ ...form, quota: form.quotaType === "web" || form.quotaType === "exclusive" ? 0 : form.quota, webCost: undefined })}>保存客户</button></div>
+    <div className="actions"><button onClick={close}>取消</button><button className="primary" disabled={!form.name.trim() || !form.quotaType} onClick={() => form.name.trim() && form.quotaType && save({ ...form, quota: hasPercentage ? form.quota : 0, webCost: undefined })}>保存客户</button></div>
   </div></BottomSheet>;
 }
 
