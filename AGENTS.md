@@ -4,7 +4,7 @@
 
 Deletion actions: existing customer editor offers 下车, deleting only that customer's record and car membership; owner editor offers 退订, deleting only the selected account. Until explicitly authorized otherwise, retain that account's customers in global customer search with carId 0 so they can be reassigned or individually removed. Direct deletion is user-requested; no extra save step. Preserve unrelated records and manually entered owner statistics.
 
-Owner summary and owner editing now share six fields in this order: 已拼多少、已拼成本、利润、剩余额度、重置次数、总拼额度. Render summary as exactly two rows of three cells with 20px spacing below the account header. Total allocated quota is a manually entered percentage; saved owner profit must appear directly in summary.
+Owner summary and owner editing share six fields in this order: 已拼多少、已拼成本、利润、剩余额度、重置次数、总拼额度. Render summary as exactly two rows of three cells with 20px spacing below the account header. Cost and profit now derive exclusively from all customers with the matching carId (cost = quota percentage * 8 yuan, profit = fee minus cost); ignore legacy manual cost/profit and show these two fields read-only in owner editing. Other owner fields remain manual. Customer save/departure updates the affected account's timestamp.
 
 2026-09-13 real-phone correction: user explicitly requests native phone scrolling and keyboard behavior, no simulated status bar on phones, no focus zoom on edit, and persistent bottom navigation in detail/edit views. App-owned native scroll containers and Radix editing panels in Prototype.tsx supersede simulated scrolling/keyboard requirements for this production flow. All text entry uses at least 16px; edit opening must not auto-focus an input. Keep existing cm2 storage keys and recorded data.
 

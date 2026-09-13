@@ -9,6 +9,7 @@ import {
   PlusIcon,
 } from "@radix-ui/react-icons";
 import "./prototype.css";
+import { accountTotals } from "./account-totals.mjs";
 type Risk = "safe" | "unknown" | "watch" | "confirmed";
 type State = "green" | "orange" | "red";
 function BottomSheet({ open, onOpenChange, title, children }: any) {
@@ -127,8 +128,7 @@ export default function Prototype() {
   const selected = cars.find((c) => c.id === selectedId);
   const ownerValues = useMemo(() => selected ? {
     spent: selected.spent ?? selected.quota,
-    cost: selected.cost ?? selected.quota * 8,
-    profit: selected.profit ?? customers.filter((c) => c.carId === selected.id).reduce((sum, c) => sum + c.fee - c.quota * 8, 0),
+    ...accountTotals(customers, selected.id),
     remaining: selected.remaining ?? 100,
     resets: selected.resets ?? 0,
     totalQuota: selected.totalQuota ?? 0,
@@ -149,6 +149,7 @@ export default function Prototype() {
     const id = old?.id ?? Date.now();
     setCustomers((items) => old ? items.map((x) => x.id === id ? { ...x, ...item } : x) : [...items, { ...item, id }]);
     setCars((items) => items.map((car) => ({ ...car,
+      updatedAt: old?.carId === car.id || item.carId === car.id ? new Date().toISOString() : car.updatedAt,
       quota: Math.max(0, car.quota - (old?.carId === car.id ? old.quota : 0) + (item.carId === car.id ? item.quota : 0)),
       customers: [...car.customers.filter((x) => x !== id), ...(item.carId === car.id ? [id] : [])],
     })));
@@ -159,6 +160,7 @@ export default function Prototype() {
     if (!customer) return;
     setCustomers((items) => items.filter((item) => item.id !== customer.id));
     setCars((items) => items.map((car) => ({ ...car,
+      updatedAt: car.id === customer.carId ? new Date().toISOString() : car.updatedAt,
       customers: car.customers.filter((id) => id !== customer.id),
       quota: car.id === customer.carId ? Math.max(0, car.quota - customer.quota) : car.quota,
     })));
@@ -252,7 +254,7 @@ export default function Prototype() {
                 <div>
                   <h1>车账号</h1>
                   <p>先看状态，再找客户</p>
-                  <a className="version-link" href="/update.html?v=updated-r1">更新时间版 · 检查更新</a>
+                  <a className="version-link" href="/update.html?v=totals-r1">自动汇总版 · 检查更新</a>
                 </div>
                 <button className="primary square" onClick={addCar} aria-label="新增车账号">
                   <PlusIcon />
@@ -531,7 +533,7 @@ function Counts({ v }: { v: number[] }) {
 function CarEditSheet({ open, close, values, save, remove }: any) {
   const [form, setForm] = useState(values);
   useEffect(() => { if (open) setForm(values); }, [values, open]);
-  return <BottomSheet open={open} onOpenChange={(v) => !v && close()} title="编辑车主数据"><div className="sheet car-edit-form">{carFields.map(([key,label,unit]) => <label className="field" key={key}><span>{label}（{unit}）</span><input type="number" step={key === "resets" ? "1" : "any"} value={form[key]} onChange={(e) => setForm({ ...form, [key]: Number(e.target.value) })} /></label>)}<div className="delete-record"><button type="button" className="danger-button" onClick={remove}>退订</button><p>点击后立即删除该车账号信息。</p></div><div className="actions"><button onClick={close}>取消</button><button className="primary" onClick={() => { save(form); close(); }}>保存</button></div></div></BottomSheet>;
+  return <BottomSheet open={open} onOpenChange={(v) => !v && close()} title="编辑车主数据"><div className="sheet car-edit-form">{carFields.map(([key,label,unit]) => <label className="field" key={key}><span>{label}（{unit}）{(key === "cost" || key === "profit") && " · 自动汇总"}</span><input type="number" readOnly={key === "cost" || key === "profit"} step={key === "resets" ? "1" : "any"} value={form[key]} onChange={(e) => setForm({ ...form, [key]: Number(e.target.value) })} /></label>)}<div className="delete-record"><button type="button" className="danger-button" onClick={remove}>退订</button><p>点击后立即删除该车账号信息。</p></div><div className="actions"><button onClick={close}>取消</button><button className="primary" onClick={() => { const { cost, profit, ...manualValues } = form; save(manualValues); close(); }}>保存</button></div></div></BottomSheet>;
 }
 
 function PrioritySheet({ open, close, setSort }: { open: boolean; close: () => void; setSort: (s: "risk" | "profit") => void }) {
