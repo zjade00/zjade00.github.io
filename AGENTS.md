@@ -2,6 +2,8 @@
 
 ## Prototype Instructions
 
+2026-09-13 categories: Add 分类 navigation with tomorrow/day-after/third-day expiry (red/orange/green), archived cars/users grouped under 归档, watch and confirmed customer lists. 下车 and 退订 now ARCHIVE, superseding deletion below. Preserve records in existing cm2 storage. Exclude archived customers from active lists and financial totals. Car archive captures totals and customer snapshots, but leaves its customers active for individual management. Deep red car names use #b42318.
+
 Purchase quota supports percentage (legacy default, 10% costs 80 yuan) or Web (fixed cost 100 yuan). Card profit, sorting, customer totals and owner totals share the calculation helper. Owner spent percentage is now derived from customers' percentage quota only; Web contributes cost/profit but no percentage. Owner spent/cost/profit are read-only derived values, overriding legacy manual values.
 
 Deletion actions: existing customer editor offers 下车, deleting only that customer's record and car membership; owner editor offers 退订, deleting only the selected account. Until explicitly authorized otherwise, retain that account's customers in global customer search with carId 0 so they can be reassigned or individually removed. Direct deletion is user-requested; no extra save step. Preserve unrelated records and manually entered owner statistics.

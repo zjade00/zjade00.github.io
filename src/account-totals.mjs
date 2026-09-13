@@ -12,7 +12,7 @@ export function accountTotals(customers, carId) {
   let profitCents = 0;
   let spentHundredths = 0;
   for (const customer of customers) {
-    if (customer.carId !== carId) continue;
+    if (customer.carId !== carId || customer.archivedAt) continue;
     if (customer.quotaType !== 'web' && customer.quotaType !== 'exclusive') spentHundredths += Math.round(Number(customer.quota) * 100);
     const cost = Math.round(customerCost(customer) * 100);
     costCents += cost;

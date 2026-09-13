@@ -10,6 +10,8 @@ import {
 } from "@radix-ui/react-icons";
 import "./prototype.css";
 import { accountTotals, customerCost, customerProfit } from "./account-totals.mjs";
+import { archiveCarRecords, archiveCustomerRecords, categoryCustomers, daysUntilExpiry } from "./customer-categories.mjs";
+type Category = "expiry" | "archived-cars" | "archived-customers" | "watch" | "confirmed";
 type Risk = "safe" | "unknown" | "watch" | "confirmed";
 type State = "green" | "orange" | "red";
 function BottomSheet({ open, onOpenChange, title, children }: any) {
@@ -51,6 +53,8 @@ type Customer = {
   expires: string;
   lastLogin: string;
   device: "Windows" | "Mac" | "Linux";
+  archivedAt?: string;
+  archivedCarName?: string;
 };
 type Car = {
   id: number;
@@ -65,6 +69,9 @@ type Car = {
   resets?: number;
   totalQuota?: number;
   updatedAt?: string;
+  archivedAt?: string;
+  archivedTotals?: { spent: number; cost: number; profit: number };
+  archivedCustomers?: Customer[];
 };
 const carFields = [
   ["spent", "已拼多少", "%"], ["cost", "已拼成本", "元"], ["profit", "利润", "元"],
@@ -101,7 +108,9 @@ function load<T>(k: string, v: T): T {
 export default function Prototype() {
   const [cars, setCars] = useState<Car[]>(() => load("cm2-cars", seedCars)),
     [customers, setCustomers] = useState<Customer[]>(() => load("cm2-customers", seedCustomers)),
-    [tab, setTab] = useState<"cars" | "customers">("cars"),
+    [tab, setTab] = useState<"cars" | "customers" | "categories">("cars"),
+    [category, setCategory] = useState<Category | null>(null),
+    [today, setToday] = useState(() => new Date()),
     [selectedId, setSelectedId] = useState<number | null>(null),
     [page, setPage] = useState(1),
     [carFilter, setCarFilter] = useState<"all" | State>("all"),
@@ -119,6 +128,13 @@ export default function Prototype() {
       navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" }).then((registration) => registration.update()).catch(() => undefined);
     }
   }, []);
+  useEffect(() => {
+    const refresh = () => setToday(new Date());
+    const timer = window.setInterval(refresh, 60000);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => { window.clearInterval(timer); window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh); };
+  }, []);
   useEffect(
     () => localStorage.setItem("cm2-cars", JSON.stringify(cars)),
     [cars],
@@ -127,7 +143,8 @@ export default function Prototype() {
     () => localStorage.setItem("cm2-customers", JSON.stringify(customers)),
     [customers],
   );
-  const selected = cars.find((c) => c.id === selectedId);
+  const activeCars = useMemo(() => cars.filter(c => !c.archivedAt), [cars]);
+  const selected = activeCars.find((c) => c.id === selectedId);
   const ownerValues = useMemo(() => selected ? {
     name: selected.name,
     state: selected.state,
@@ -142,19 +159,19 @@ export default function Prototype() {
     setSelectedId(id);
     setCarForm(true);
   };
-  const addCustomer = () => cars.length && setCustomerForm({ open: true });
+  const addCustomer = () => activeCars.length && setCustomerForm({ open: true });
   const editCustomer = (c: Customer) => setCustomerForm({ open: true, customer: c });
-  const changeTab = (next: "cars" | "customers") => {
+  const changeTab = (next: "cars" | "customers" | "categories") => {
     (document.activeElement as HTMLElement)?.blur?.();
     setCarForm(false); setCustomerForm({ open: false }); setSheet(false); setPriorityOpen(false);
-    setSelectedId(null); setTab(next);
+    setSelectedId(null); setTab(next); setCategory(null);
   };
-  const navigation = <nav className="nav" aria-label="主要分类"><button className={tab === "cars" ? "on" : ""} onClick={() => changeTab("cars")}>▣<small>车账号</small></button><button className={tab === "customers" ? "on" : ""} onClick={() => changeTab("customers")}>♙<small>客户</small></button></nav>;
+  const navigation = <nav className="nav" aria-label="主要分类"><button className={tab === "cars" ? "on" : ""} onClick={() => changeTab("cars")}>▣<small>车账号</small></button><button className={tab === "customers" ? "on" : ""} onClick={() => changeTab("customers")}>♙<small>客户</small></button><button className={tab === "categories" ? "on" : ""} onClick={() => changeTab("categories")}>▦<small>分类</small></button></nav>;
   const saveCustomer = (item: Omit<Customer, "id">) => {
     const old = customerForm.customer;
     const id = old?.id ?? Date.now();
     setCustomers((items) => old ? items.map((x) => x.id === id ? { ...x, ...item } : x) : [...items, { ...item, id }]);
-    setCars((items) => items.map((car) => ({ ...car,
+    setCars((items) => items.map((car) => car.archivedAt ? car : ({ ...car,
       updatedAt: old?.carId === car.id || item.carId === car.id ? new Date().toISOString() : car.updatedAt,
       quota: Math.max(0, car.quota - (old?.carId === car.id ? old.quota : 0) + (item.carId === car.id ? item.quota : 0)),
       customers: [...car.customers.filter((x) => x !== id), ...(item.carId === car.id ? [id] : [])],
@@ -164,25 +181,21 @@ export default function Prototype() {
   const removeCustomer = () => {
     const customer = customerForm.customer;
     if (!customer) return;
-    setCustomers((items) => items.filter((item) => item.id !== customer.id));
-    setCars((items) => items.map((car) => ({ ...car,
-      updatedAt: car.id === customer.carId ? new Date().toISOString() : car.updatedAt,
-      customers: car.customers.filter((id) => id !== customer.id),
-      quota: car.id === customer.carId ? Math.max(0, car.quota - customer.quota) : car.quota,
-    })));
+    const archived = archiveCustomerRecords(customers, cars, customer.id);
+    setCustomers(archived.customers);
+    setCars(archived.cars);
     setCustomerForm({ open: false });
   };
   const removeCar = () => {
     if (!selected) return;
-    setCars((items) => items.filter((car) => car.id !== selected.id));
-    setCustomers((items) => items.map((customer) => customer.carId === selected.id ? { ...customer, carId: 0 } : customer));
+    setCars((items) => archiveCarRecords(items, customers, selected.id));
     setCarForm(false); setPriorityOpen(false); setCustomerForm({ open: false });
     setSelectedId(null); setTab("cars"); setPage(1);
   };
-  const customerEditor = <CustomerFormSheet open={customerForm.open} close={() => setCustomerForm({ open: false })} customer={customerForm.customer} cars={cars} save={saveCustomer} remove={removeCustomer} />;
+  const customerEditor = <CustomerFormSheet open={customerForm.open} close={() => setCustomerForm({ open: false })} customer={customerForm.customer} cars={activeCars} save={saveCustomer} remove={removeCustomer} />;
   const visible = useMemo(() => {
     let a = customers.filter((c) =>
-      selectedId ? c.carId === selectedId : true,
+      !c.archivedAt && (selectedId ? c.carId === selectedId : true),
     );
     if (applied)
       a = a.filter((c) =>
@@ -205,7 +218,7 @@ export default function Prototype() {
   const counts = (car: Car) =>
     (["safe", "unknown", "watch", "confirmed"] as Risk[]).map(
       (r) =>
-        customers.filter((c) => car.customers.includes(c.id) && c.risk === r)
+        customers.filter((c) => !c.archivedAt && c.carId === car.id && c.risk === r)
           .length,
     );
   if (selected)
@@ -260,7 +273,7 @@ export default function Prototype() {
                 <div>
                   <h1>车账号</h1>
                   <p>先看状态，再找客户</p>
-                  <a className="version-link" href="/update.html?v=combo-r1">组合额度版 · 检查更新</a>
+                  <a className="version-link" href="/update.html?v=categories-r1">分类归档版 · 检查更新</a>
                 </div>
                 <button className="primary square" onClick={addCar} aria-label="新增车账号">
                   <PlusIcon />
@@ -294,10 +307,10 @@ export default function Prototype() {
                 ))}
               </div>
               <div className="car-list">
-                {cars.length === 0 && (
+                {activeCars.length === 0 && (
                   <div className="empty-state"><h2>还没有车账号</h2><p>点击右上角的＋，先添加你的第一个车组。</p><button className="primary" onClick={addCar}>新增车账号</button></div>
                 )}
-                {cars
+                {activeCars
                   .filter((c) => carFilter === "all" || c.state === carFilter)
                   .filter((c) => c.name.includes(query))
                   .slice((page - 1) * 10, page * 10)
@@ -312,7 +325,7 @@ export default function Prototype() {
                     </button>
                   ))}
               </div>
-              {cars.length > 10 && <div className="pages">
+              {activeCars.length > 10 && <div className="pages">
                 <button onClick={() => setPage(1)}>‹</button>
                 <button
                   className={page === 1 ? "on" : ""}
@@ -327,7 +340,7 @@ export default function Prototype() {
                   2
                 </button>
                 <button onClick={() => setPage(2)}>›</button>
-                <span>共 {cars.length} 个账号</span>
+                <span>共 {activeCars.length} 个账号</span>
               </div>}
               <div className="legend">
                 <span>
@@ -348,6 +361,8 @@ export default function Prototype() {
                 </span>
               </div>
             </>
+          ) : tab === "categories" ? (
+            <Categories customers={customers} cars={cars} category={category} setCategory={setCategory} now={today} editCustomer={editCustomer} />
           ) : (
               <CustomerHome
                 list={visible}
@@ -466,14 +481,14 @@ function CustomerHome({
         {list.length === 0 && (
           <div className="empty-state"><h2>还没有客户</h2><p>新增客户后，收费、成本和利润会自动计算。</p><button className="primary" onClick={addCustomer}>新增客户</button></div>
         )}
-        {list.slice(0, 6).map((c) => (
+        {list.map((c) => (
           <Card c={c} key={c.id} onEdit={editCustomer} />
         ))}
       </div>
     </>
   );
 }
-function Card({ c, onEdit }: { c: Customer; onEdit: (c: Customer) => void }) {
+function Card({ c, onEdit }: { c: Customer; onEdit?: (c: Customer) => void }) {
   let cost = customerCost(c),
     p = customerProfit(c);
   return (
@@ -483,7 +498,7 @@ function Card({ c, onEdit }: { c: Customer; onEdit: (c: Customer) => void }) {
         <span className={`risk ${c.risk}`}>
           {c.risk === "confirmed" ? "已确定（老鼠屎）" : labels[c.risk]}
         </span>
-        {c.risk === "confirmed" && <em>需移出</em>}
+        {c.risk === "confirmed" && !c.archivedAt && onEdit && <em>需移出</em>}
       </div>
       <div className="money">
         <span>
@@ -519,9 +534,48 @@ function Card({ c, onEdit }: { c: Customer; onEdit: (c: Customer) => void }) {
         <span>最后登录时间：{c.lastLogin || "未填写"}</span>
         <span>设备型号：{c.device || "Windows"}</span>
       </div>
-      <button className="edit" onClick={() => onEdit(c)}>编辑</button>
+      {onEdit && !c.archivedAt && <button className="edit" onClick={() => onEdit(c)}>编辑</button>}
     </article>
   );
+}
+function Categories({ customers, cars, category, setCategory, now, editCustomer }: { customers: Customer[]; cars: Car[]; category: Category | null; setCategory: (c: Category | null) => void; now: Date; editCustomer: (c: Customer) => void }) {
+  const titles = { expiry: "到期提醒", "archived-cars": "归档车辆", "archived-customers": "归档用户", watch: "需留意客户", confirmed: "老鼠屎客户" };
+  const archivedCars = cars.filter(c => c.archivedAt).sort((a, b) => b.archivedAt!.localeCompare(a.archivedAt!));
+  const list = category ? categoryCustomers(customers, category, now) : [];
+  const count = (key: Category) => key === "archived-cars" ? archivedCars.length : categoryCustomers(customers, key, now).length;
+  const entry = (key: Category, detail: string, color = "") => <button className={`category-entry ${color}`} onClick={() => setCategory(key)}><span><strong>{titles[key]}</strong><small>{detail}</small></span><b>{count(key)}</b><ChevronRightIcon /></button>;
+  const archivedDate = (value: string) => new Date(value).toLocaleString("zh-CN", { hour12: false });
+  return <div className="categories-page">
+    <header className="top"><div>{category && <button className="category-back" onClick={() => setCategory(null)}>‹ 返回分类</button>}<h1>{category ? titles[category] : "分类"}</h1></div></header>
+    {!category ? <div className="category-menu">
+      {entry("expiry", "明天起 3 天内到期", "expiry")}
+      <section className="archive-group"><h2>归档</h2>{entry("archived-cars", "已退订的车辆记录")}{entry("archived-customers", "已下车的客户记录")}</section>
+      {entry("watch", "橙色 · 需要留意", "watch")}
+      {entry("confirmed", "红色 · 已确定", "confirmed")}
+    </div> : <>
+      <p className="category-caption">共 {count(category)} {category === "archived-cars" ? "辆车" : "位客户"}</p>
+      {count(category) === 0 && <div className="empty"><h2>暂无{titles[category]}</h2></div>}
+      {category === "archived-cars" ? archivedCars.map(car => {
+        const totals = { ...car, ...car.archivedTotals };
+        return <section className="archive-car" key={car.id}>
+          <h2 className={`car-name ${car.state}`}><i className={`dot ${car.state}`} />{car.name}</h2>
+          <p className="category-caption">归档时间：{archivedDate(car.archivedAt!)}</p>
+          <div className="archive-stats">{carFields.map(([key, label, unit]) => <div key={key}><span>{label}</span><b>{totals[key] ?? 0}{unit}</b></div>)}</div>
+          <h3>归档时客户 · {car.archivedCustomers?.length || 0}</h3>
+          {car.archivedCustomers?.map(c => <Card key={c.id} c={c} />)}
+        </section>;
+      }) : list.map((c: Customer) => {
+        const days = daysUntilExpiry(c.expires, now);
+        const parent = cars.find(car => car.id === c.carId);
+        return <section className="category-customer" key={c.id}>
+          {category === "expiry" && <div className={`expiry-label day-${days}`}>{["", "明天到期", "后天到期", "大后天到期"][days]} · {c.expires}</div>}
+          <p className="category-caption">所属账号：{c.archivedCarName || parent?.name || "原账号不可用"}{!c.archivedAt && parent?.archivedAt ? "（已归档）" : ""}</p>
+          {c.archivedAt && <p className="category-caption">归档时间：{archivedDate(c.archivedAt)}</p>}
+          <Card c={c} onEdit={c.archivedAt ? undefined : editCustomer} />
+        </section>;
+      })}
+    </>}
+  </div>;
 }
 function Counts({ v }: { v: number[] }) {
   return (
@@ -543,7 +597,7 @@ function CarEditSheet({ open, close, values, save, remove }: any) {
     <fieldset className="owner-state"><legend>账号额度状态</legend><div className="choices three">
       {([['green', '绿色 · 正常'], ['orange', '橙色 · 有点快'], ['red', '红色 · 非常快']] as const).map(([state, label]) => <button key={state} type="button" aria-pressed={form.state === state} className={form.state === state ? 'selected' : ''} onClick={() => setForm({ ...form, state })}><i className={`dot ${state}`} />{label}</button>)}
     </div></fieldset>
-    {carFields.map(([key,label,unit]) => <label className="field" key={key}><span>{label}（{unit}）{["spent", "cost", "profit"].includes(key) && " · 自动汇总"}</span><input type="number" readOnly={["spent", "cost", "profit"].includes(key)} step={key === "resets" ? "1" : "any"} value={form[key]} onChange={(e) => setForm({ ...form, [key]: Number(e.target.value) })} /></label>)}<div className="delete-record"><button type="button" className="danger-button" onClick={remove}>退订</button><p>点击后立即删除该车账号信息。</p></div><div className="actions"><button onClick={close}>取消</button><button className="primary" disabled={!form.name?.trim()} onClick={() => { const { spent, cost, profit, ...manualValues } = form; if (!form.name?.trim()) return; save({ ...manualValues, name: form.name.trim() }); close(); }}>保存</button></div></div></BottomSheet>;
+    {carFields.map(([key,label,unit]) => <label className="field" key={key}><span>{label}（{unit}）{["spent", "cost", "profit"].includes(key) && " · 自动汇总"}</span><input type="number" readOnly={["spent", "cost", "profit"].includes(key)} step={key === "resets" ? "1" : "any"} value={form[key]} onChange={(e) => setForm({ ...form, [key]: Number(e.target.value) })} /></label>)}<div className="delete-record"><button type="button" className="danger-button" onClick={remove}>退订</button><p>退订后保留到归档车辆；客户仍可在客户页管理。</p></div><div className="actions"><button onClick={close}>取消</button><button className="primary" disabled={!form.name?.trim()} onClick={() => { const { spent, cost, profit, ...manualValues } = form; if (!form.name?.trim()) return; save({ ...manualValues, name: form.name.trim() }); close(); }}>保存</button></div></div></BottomSheet>;
 }
 
 function PrioritySheet({ open, close, setSort }: { open: boolean; close: () => void; setSort: (s: "risk" | "profit") => void }) {
@@ -579,7 +633,7 @@ function CustomerFormSheet({ open, close, customer, cars, save, remove }: { open
     <label className="field"><span>客户标签（可多选）</span><div className="choices">{preset.map((t) => <button type="button" key={t} className={form.tags.includes(t) ? 'selected' : ''} onClick={() => update('tags', form.tags.includes(t) ? form.tags.filter((x) => x !== t) : [...form.tags, t])}>{t}</button>)}</div></label>
     <label className="field"><span>估算用量</span><select value={form.usage} onChange={(e) => update('usage', e.target.value)}><option>不清楚</option><option>较少</option><option>一般</option><option>偏多</option><option>很多</option></select></label>
     <label className="field"><span>简短说明</span><textarea value={form.note} onChange={(e) => update('note', e.target.value)} placeholder="填写特殊要求或说明" /></label>
-    {customer && <div className="delete-record"><button type="button" className="danger-button" onClick={remove}>下车</button><p>点击后立即删除该客户信息。</p></div>}
+    {customer && <div className="delete-record"><button type="button" className="danger-button" onClick={remove}>下车</button><p>下车后保留到归档用户，不再计入当前客户汇总。</p></div>}
     <div className="actions"><button onClick={close}>取消</button><button className="primary" disabled={!form.name.trim() || !form.quotaType} onClick={() => form.name.trim() && form.quotaType && save({ ...form, quota: hasPercentage ? form.quota : 0, webCost: undefined })}>保存客户</button></div>
   </div></BottomSheet>;
 }
