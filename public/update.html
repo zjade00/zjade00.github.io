@@ -14,12 +14,12 @@ document.getElementById('update').addEventListener('click', async () => {
   const status = document.getElementById('status');
   button.disabled = true;
   status.textContent = '正在检查新版…';
-  const destination = '/?v=20260913-delete-r1&t=' + Date.now();
+  const destination = '/?v=20260913-updated-r1&t=' + Date.now();
   try {
     const response = await fetch(destination, { cache: 'no-store' });
     if (!response.ok) throw new Error('network');
     const html = await response.text();
-    if (!html.includes('delete-r1')) throw new Error('pending');
+    if (!html.includes('updated-r1')) throw new Error('pending');
     if ('serviceWorker' in navigator) {
       const registrations = await navigator.serviceWorker.getRegistrations();
       await Promise.all(registrations.filter(r => r.scope === location.origin + '/').map(r => r.unregister()));

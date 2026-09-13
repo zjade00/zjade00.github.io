@@ -438,6 +438,7 @@
   flex-direction: column;
 }
 .owner-customer-counts { display: flex; align-items: center; justify-content: space-between; padding: 4px 2px; }
+.owner-updated { grid-column: 1 / -1; color: #667085; font-size: 12px; font-weight: 400; line-height: 1.5; border-top: 1px solid var(--line); padding-top: 8px; }
 .summary span {
   font-size: 12px;
   color: #667085;

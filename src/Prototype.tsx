@@ -61,6 +61,7 @@ type Car = {
   remaining?: number;
   resets?: number;
   totalQuota?: number;
+  updatedAt?: string;
 };
 const carFields = [
   ["spent", "已拼多少", "%"], ["cost", "已拼成本", "元"], ["profit", "利润", "元"],
@@ -133,7 +134,7 @@ export default function Prototype() {
     totalQuota: selected.totalQuota ?? 0,
   } : undefined, [selected, customers]);
   const addCar = () => {
-    setCars((items) => [...items, { id: Date.now(), name: `新车账号${items.length + 1}`, state: "green", quota: 0, customers: [], spent: 0, cost: 0, profit: 0, remaining: 100, resets: 0 }]);
+    setCars((items) => [...items, { id: Date.now(), name: `新车账号${items.length + 1}`, state: "green", quota: 0, customers: [], spent: 0, cost: 0, profit: 0, remaining: 100, resets: 0, updatedAt: new Date().toISOString() }]);
   };
   const addCustomer = () => cars.length && setCustomerForm({ open: true });
   const editCustomer = (c: Customer) => setCustomerForm({ open: true, customer: c });
@@ -221,6 +222,7 @@ export default function Prototype() {
                 <span>{label}</span>
                 <b className={key === "profit" ? (ownerValues.profit < 0 ? "neg" : "pos") : ""}>{unit === "元" ? `¥${ownerValues[key]}` : `${ownerValues[key]}${unit}`}</b>
               </div>)}
+              <small className="owner-updated">最后更新时间：{selected.updatedAt ? new Date(selected.updatedAt).toLocaleString("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }) : "尚未记录"}</small>
             </section>
             <p className="owner-customer-counts">客户状态 <Counts v={counts(selected)} /></p>
             <div className="section-head">
@@ -234,7 +236,7 @@ export default function Prototype() {
             </div>
           </main>
         </MobileScroll>
-        <CarEditSheet open={carForm} close={() => setCarForm(false)} values={ownerValues} remove={removeCar} save={(values) => setCars((a) => a.map((c) => c.id === selected.id ? { ...c, ...values } : c))} />
+        <CarEditSheet open={carForm} close={() => setCarForm(false)} values={ownerValues} remove={removeCar} save={(values) => setCars((a) => a.map((c) => c.id === selected.id ? { ...c, ...values, updatedAt: new Date().toISOString() } : c))} />
         <PrioritySheet open={priorityOpen} close={() => setPriorityOpen(false)} setSort={setSort} />
         {customerEditor}
         {navigation}
@@ -250,7 +252,7 @@ export default function Prototype() {
                 <div>
                   <h1>车账号</h1>
                   <p>先看状态，再找客户</p>
-                  <a className="version-link" href="/update.html?v=delete-r1">退订下车版 · 检查更新</a>
+                  <a className="version-link" href="/update.html?v=updated-r1">更新时间版 · 检查更新</a>
                 </div>
                 <button className="primary square" onClick={addCar} aria-label="新增车账号">
                   <PlusIcon />
