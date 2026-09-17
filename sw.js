@@ -1,4 +1,4 @@
-const CACHE = "customer-manager-20260917-cloud-admin-r1";
+const CACHE = "customer-manager-20260917-node-pool-r1";
 const APP_SHELL = ["/", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png"];
 
 self.addEventListener("install", (event) => {
