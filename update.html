@@ -14,12 +14,13 @@ document.getElementById('update').addEventListener('click', async () => {
   const status = document.getElementById('status');
   button.disabled = true;
   status.textContent = '正在检查新版…';
-  const destination = '/?v=20260913-car-scroll-r1&t=' + Date.now();
+  const version = '20260917-cloud-admin-r1';
+  const destination = '/?v=' + version + '&t=' + Date.now();
   try {
     const response = await fetch(destination, { cache: 'no-store' });
     if (!response.ok) throw new Error('network');
     const html = await response.text();
-    if (!html.includes('car-scroll-r1')) throw new Error('pending');
+    if (!html.includes('content="' + version + '"')) throw new Error('pending');
     if ('serviceWorker' in navigator) {
       const registrations = await navigator.serviceWorker.getRegistrations();
       await Promise.all(registrations.filter(r => r.scope === location.origin + '/').map(r => r.unregister()));
@@ -29,7 +30,9 @@ document.getElementById('update').addEventListener('click', async () => {
       await Promise.all(keys.filter(key => key.startsWith('customer-manager-')).map(key => caches.delete(key)));
     }
     status.textContent = '新版已就绪，正在打开…';
-    location.replace(destination);
+    // Preserve an email login/recovery fragment while replacing the app shell.
+    // This page never clears localStorage, so old phone records remain intact.
+    location.replace(destination + location.hash);
   } catch (error) {
     status.textContent = error.message === 'pending' ? '新版还在同步，请稍后再点一次更新。现有数据保留。' : '暂时连接不上，请检查网络后重试。现有数据保留。';
     button.disabled = false;
