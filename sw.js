@@ -1,4 +1,4 @@
-const CACHE = "customer-manager-20260917-car-customer-scope-r1";
+const CACHE = "customer-manager-20260917-offboard-archive-r1";
 const APP_SHELL = ["/", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png"];
 
 self.addEventListener("install", (event) => {

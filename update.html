@@ -14,7 +14,7 @@ document.getElementById('update').addEventListener('click', async () => {
   const status = document.getElementById('status');
   button.disabled = true;
   status.textContent = '正在检查新版…';
-  const version = '20260917-car-customer-scope-r1';
+  const version = '20260917-offboard-archive-r1';
   const destination = '/?v=' + version + '&t=' + Date.now();
   try {
     const response = await fetch(destination, { cache: 'no-store' });
