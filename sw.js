@@ -1,4 +1,4 @@
-const CACHE = "customer-manager-20260919-car-list-modes-r1";
+const CACHE = "customer-manager-20260919-node-offline-r1";
 const APP_SHELL = ["/", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png"];
 
 self.addEventListener("install", (event) => {
